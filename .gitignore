@@ -4,4 +4,4 @@ dist
 .env.*
 *.blend1
 blender/*.blend
-tex/
+/tex/
