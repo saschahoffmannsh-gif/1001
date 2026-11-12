@@ -1,4 +1,4 @@
-import { chromium } from '/workspace/roller/node_modules/playwright/index.mjs';
+import { chromium } from '/workspace/pw/node_modules/playwright/index.mjs';
 const b = await chromium.launch({ args: ['--use-gl=angle','--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const p = await b.newPage({ viewport: { width: 800, height: 600 } });
 p.on('console', (m) => console.log('console:', m.type(), m.text().slice(0, 200)));

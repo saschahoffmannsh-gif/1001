@@ -179,8 +179,9 @@ function renderAuction() {
   $('bid-seats').innerHTML = NAMES().map((n, p) => {
     const l = last(p);
     const state = a.passed[p] ? 'passed' : (a.high && a.high.p === p ? 'high' : '');
-    const val = l ? (l.pass ? 'passt' : l.bid) : (p === a.forehand ? 'Vorhand' : '–');
-    return `<div class="seat ${state} ${!a.done && a.turn === p ? 'turn' : ''}"><i class="peg p${p}"></i><span class="sn">${SHORT[n]}</span><span class="sv">${val}</span></div>`;
+    const val = l ? (l.pass ? 'passt' : l.bid) : '–';
+    const vh = p === a.forehand ? `<em class="vh" title="Vorhand">${players > 2 ? 'VH' : 'Vorhand'}</em>` : '';
+    return `<div class="seat ${state} ${!a.done && a.turn === p ? 'turn' : ''}"><i class="peg p${p}"></i><span class="sn">${SHORT[n]}</span>${vh}<span class="sv">${val}</span></div>`;
   }).join('');
   $('bid-high').innerHTML = a.high ? `<span class="k">Höchstes Gebot</span><b>${a.high.value}</b><span class="who">${nm(a.high.p)}</span>` : `<span class="k">Noch kein Gebot</span><b>–</b><span class="who">Eröffnung mit 40</span>`;
   $('bid-log').innerHTML = a.log.map((e) => `<span class="chip-tile p${e.p} ${e.pass ? 'pass' : ''}" title="${nm(e.p)}">${e.pass ? 'P' : e.bid}</span>`).join('');
@@ -290,7 +291,7 @@ function humanMove() {
         finish({ card, declare: choice === 'yes' });
       } else finish({ card, declare: false });
     };
-    function finish(m) { table.onPick = null; table.clearPlayable(st.hands[0]); table.hover = null; show('actions', false); resolve(m); }
+    function finish(m) { table.onPick = null; table.clearPlayable(st.hands[0]); table.hover = null; show('actions', false); setStatus(''); resolve(m); }
   });
 }
 function askMeld(card) {

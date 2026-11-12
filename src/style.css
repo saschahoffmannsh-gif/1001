@@ -94,14 +94,14 @@ button.chip.on { background: var(--teal); color: #fff; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), inset 0 -2px 0 rgba(120, 82, 44, .25), inset 0 0 0 1px rgba(150, 110, 70, .25),
     0 8px 18px rgba(70, 45, 20, .22), 0 2px 4px rgba(70, 45, 20, .18); }
 #hud .players { display: flex; gap: 4px; }
-.pl { position: relative; display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 7px; align-items: center;
-  padding: 5px 10px 5px 8px; border-radius: 10px; min-width: 108px; transition: background .25s, box-shadow .25s; }
-.pl .peg { grid-row: 1 / 3; }
-.pl .nm { font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--engrave-l); text-shadow: 0 1px 0 rgba(255, 250, 240, .7); white-space: nowrap; }
+.pl { position: relative; display: grid; grid-template-columns: auto auto auto; grid-template-rows: auto auto; column-gap: 7px; align-items: center;
+  padding: 4px 10px 4px 8px; border-radius: 10px; transition: background .25s, box-shadow .25s; }
+.pl .peg { grid-column: 1; grid-row: 1 / 3; }
+.pl .nm { grid-column: 2 / 4; grid-row: 1; font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--engrave-l); text-shadow: 0 1px 0 rgba(255, 250, 240, .7); white-space: nowrap; }
 .pl .nm .short { display: none; }
-.pl .tot { grid-column: 2; font-size: 21px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--engrave);
-  text-shadow: 0 1px 0 rgba(255, 250, 240, .8), 0 -1px 0 rgba(80, 50, 20, .25); }
-.pl .rd { position: absolute; right: 9px; top: 6px; font-size: 10.5px; font-weight: 600; color: var(--engrave-l); font-variant-numeric: tabular-nums; opacity: .9; }
+.pl .tot { grid-column: 2; grid-row: 2; font-size: 21px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--engrave);
+  text-shadow: 0 1px 0 rgba(255, 250, 240, .8), 0 -1px 0 rgba(80, 50, 20, .25); min-width: 2.2ch; }
+.pl .rd { grid-column: 3; grid-row: 2; align-self: end; padding-bottom: 3px; font-size: 10.5px; font-weight: 600; color: var(--engrave-l); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .pl.turn { background: rgba(255, 250, 238, .55); box-shadow: inset 0 0 0 1px rgba(201, 154, 58, .55), 0 0 12px rgba(255, 214, 140, .55); }
 .pl.bidder .nm::after { content: ' · Reiz'; color: var(--red); font-weight: 800; }
 /* Steckerköpfe wie auf dem Brett */
@@ -145,7 +145,8 @@ button.knob { width: 34px; height: 34px; padding: 0; border-radius: 50%; font-si
 .seats { display: flex; gap: 6px; margin-bottom: 10px; }
 .seat { flex: 1; display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 10px; min-width: 0;
   background: rgba(120, 82, 44, .10); box-shadow: inset 0 1px 2px rgba(80, 50, 20, .22), 0 1px 0 rgba(255, 250, 240, .7); transition: all .2s; }
-.seat .sn { font-size: 12px; font-weight: 700; color: var(--engrave-l); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seat .vh { font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #fff; background: var(--engrave-l); border-radius: 4px; padding: 1px 4px; flex-shrink: 0; }
+.seat .sn { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--engrave-l); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .seat .sv { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--engrave); font-variant-numeric: tabular-nums; }
 .seat.turn { background: rgba(255, 250, 238, .7); box-shadow: inset 0 0 0 1.5px rgba(201, 154, 58, .7), 0 0 12px rgba(255, 214, 140, .6); }
 .seat.passed { opacity: .55; } .seat.passed .sv { font-weight: 600; font-size: 12px; }
@@ -189,7 +190,8 @@ button.tile-btn .wait::after { content: ''; display: inline-block; width: 6px; h
   .pl { flex: 1; min-width: 0; padding: 3px 6px; column-gap: 5px; row-gap: 0; grid-template-columns: auto 1fr auto; }
   .pl .peg { grid-column: 1; grid-row: 1 / 3; }
   .pl .nm { grid-column: 2; grid-row: 1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
-  .pl .rd { position: static; grid-column: 3; grid-row: 1; font-size: 10px; }
+  .pl .rd { grid-column: 3; grid-row: 1; font-size: 10px; padding: 0; align-self: center; }
+  .pl .nm { grid-column: 2; }
   .pl .tot { grid-column: 2 / 4; grid-row: 2; font-size: 19px; }
   .pl.bidder .nm::after { content: ' ·R'; }
   #hud .stats { margin: 4px 0 0; padding: 4px 0 0; border-left: 0; border-top: 1px solid var(--groove); border-image: none; box-shadow: inset 0 1px 0 rgba(255, 250, 240, .5); }
@@ -210,5 +212,6 @@ button.tile-btn .wait::after { content: ''; display: inline-block; width: 6px; h
   .bid-high b { font-size: 26px; }
   button.tile-btn { height: 52px; font-size: 17px; }
   #banner { font-size: 21px; }
+  #actions { bottom: calc(var(--hand-h, 150px) + 46px); }
   .pcount button span { font-size: 10.5px; }
 }
