@@ -139,7 +139,7 @@ def draw_suit(d, suit, cx, cy, s, fill):
             pts.append((cx + a * math.sin(ang), cy - a * math.cos(ang)))
         d.polygon(pts, fill=fill)
 
-RANK_TXT = {'9': '9', 'J': 'J', 'Q': 'Q', 'K': 'K', '10': '10', 'A': 'A'}
+RANK_TXT = {'7': '7', '8': '8', '9': '9', 'J': 'J', 'Q': 'Q', 'K': 'K', '10': '10', 'A': 'A'}
 
 def tile_faces():
     tw, th = L['tileW'], L['tileH']
@@ -147,7 +147,7 @@ def tile_faces():
     ws, hs = W * SS, H * SS
     for suit in 'HDCS':
         body = hex2rgb(L['colors'][suit]); ink = hex2rgb(L['ink'][suit])
-        for rank in ['9', 'J', 'Q', 'K', '10', 'A']:
+        for rank in ['7', '8', '9', 'J', 'Q', 'K', '10', 'A']:
             im = Image.new('RGB', (ws, hs), body); d = ImageDraw.Draw(im)
             draw_suit(d, suit, ws / 2, hs * 0.315, ws * 0.355, ink)
             fs = int(hs * 0.40 if rank != '10' else hs * 0.36)

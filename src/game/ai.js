@@ -25,7 +25,7 @@ export function knowledge(st, p) {
 
 // ------------------------------------------------------------ Reizen
 // Grundwert je Spielerzahl (mit tools/sim.mjs kalibriert): mehr Gegner = weniger Augen pro Hand
-export const EST_BASE = { 2: 24, 3: -6, 4: -16 };
+export const EST_BASE = { 2: 24, 3: 14, 4: 0 };
 export function handEstimate(hand, n = 2) {
   let est = EST_BASE[n] ?? 24;
   for (const c of hand) est += { A: 11.5, '10': 8.5, K: 3.5, Q: 2.5, J: 1.5, '9': 0.5, '8': 0.3, '7': 0.2 }[rankOf(c)];

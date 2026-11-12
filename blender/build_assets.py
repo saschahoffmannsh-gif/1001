@@ -187,6 +187,13 @@ def hero_layout():
     place('HA', 1, 5, 0.5); place('H9', 2, 5, -0.3, dy=0.03); place('HK', 3, 5, 1.0, dy=0.06)
     place('DQ', 7, 2, -1.5); place('CJ', 8, 2, 2.0, dy=0.05); place('S10', 7, 1, 0.5, dx=0.12, dy=-0.02)
 
+def sevens_layout():
+    # Vorschau: neue 7 und 8 neben vorhandenen Steinen (gleiche Geometrie, gleiches Material)
+    for i, c in enumerate(['H7', 'H8', 'H9', 'HA']): place(c, 2 + i, 5, (i - 1.5) * 0.6)
+    for i, c in enumerate(['S7', 'S8', 'S10']): place(c, 6 + i, 5, (i - 1) * 0.5)
+    for i, c in enumerate(['D7', 'D8', 'DQ']): place(c, 2 + i, 3, (i - 1) * 0.8)
+    for i, c in enumerate(['C7', 'C8', 'CJ']): place(c, 6 + i, 3, (i - 1) * -0.7)
+
 def setup_world_and_light():
     world = bpy.data.worlds.new('World'); scene.world = world; world.use_nodes = True
     bg = world.node_tree.nodes['Background']
@@ -217,6 +224,8 @@ def setup_camera(view='hero'):
     if view == 'hero':
         co.location = Vector((float(arg('--px', 1.6)), float(arg('--py', -13.2)), float(arg('--pz', 15.5))))
         target = Vector((float(arg('--tx', 1.3)), float(arg('--ty', -0.6)), 0))
+    elif view == 'sevens':
+        co.location = Vector((0.9, -8.6, 9.2)); target = Vector((0.7, -0.2, 0.0)); cam.lens = 42
     else:  # Nahaufnahme Steine
         co.location = Vector((3.2, -6.5, 4.0)); target = Vector((2.5, -3.6, 0.1)); cam.lens = 60
     d = target - co.location
@@ -232,9 +241,9 @@ def render(path, samples=96, res=(1152, 864)):
     scene.view_settings.exposure = float(arg('--exposure', 0.0))
     scene.render.filepath = path; bpy.ops.render.render(write_still=True)
 
-if '--render' in argv or '--closeup' in argv:
+if '--render' in argv or '--closeup' in argv or '--sevens' in argv:
     board.rotation_euler.z = math.radians(float(arg('--yaw', 2.5)))
-    hero_layout()
+    sevens_layout() if '--sevens' in argv else hero_layout()
     for ob in placed:  # mit dem Brett drehen
         ob.location = Matrix.Rotation(board.rotation_euler.z, 4, 'Z') @ ob.location
         ob.rotation_euler.z += board.rotation_euler.z
@@ -248,6 +257,8 @@ if '--render' in argv or '--closeup' in argv:
         setup_camera('hero'); render(os.path.join(PREV, arg('--name', 'blender_hero.png')), int(arg('--samples', 96)))
     if '--closeup' in argv:
         setup_camera('close'); render(os.path.join(PREV, 'blender_closeup.png'), int(arg('--samples', 96)), (1200, 900))
+    if '--sevens' in argv:
+        setup_camera('sevens'); render(os.path.join(PREV, arg('--name', 'tiles_7_8_blender.png')), int(arg('--samples', 96)), (1400, 1000))
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT, 'blender', 'hero_scene.blend'))
 
 if '--export' in argv:
