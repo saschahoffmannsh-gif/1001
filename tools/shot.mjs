@@ -1,0 +1,10 @@
+import { chromium } from '/workspace/roller/node_modules/playwright/index.mjs';
+const [,, url, out, w = 1152, h = 864, wait = 6000] = process.argv;
+const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const p = await b.newPage({ viewport: { width: +w, height: +h }, deviceScaleFactor: 1 });
+p.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('console:', m.text()); });
+p.on('pageerror', (e) => console.log('pageerror:', e.message));
+await p.goto(url);
+await p.waitForTimeout(+wait);
+await p.screenshot({ path: out });
+await b.close();

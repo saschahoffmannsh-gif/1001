@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#efe5d8" />
+<title>1001 – Tausendundeins</title>
+<meta name="description" content="Tausendundeins als Brettspiel: Steine statt Karten, Spuren auf dem Raster, Reizrunde und Hochzeiten – gegen den Computer." />
+<link rel="icon" type="image/png" href="/assets/tex/tile_HA.png" />
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+
+  <header id="hud" class="hidden">
+    <div class="score-card">
+      <div class="row you"><span class="dot red"></span><span class="lbl">Du</span><b id="sc-0">0</b></div>
+      <div class="row cpu"><span class="dot dark"></span><span class="lbl">Computer</span><b id="sc-1">0</b></div>
+      <div class="goal">Ziel 1001</div>
+    </div>
+    <div class="info-card">
+      <div><span class="k">Reiz</span><b id="i-bid">–</b></div>
+      <div><span class="k">Trumpf</span><b id="i-trump">keiner</b></div>
+      <div><span class="k">Stich</span><b id="i-trick">0/12</b></div>
+      <div><span class="k">Stock</span><b id="i-stock">8</b></div>
+      <div class="deal-pts"><span class="k">Runde</span><b id="i-round">Du 0 · CPU 0</b></div>
+    </div>
+    <div class="top-btns">
+      <button id="btn-help" class="icon" title="Regeln">?</button>
+      <button id="btn-menu" class="icon" title="Menü">☰</button>
+    </div>
+  </header>
+
+  <div id="status" class="hidden"><span id="status-txt"></span></div>
+  <div id="actions" class="hidden">
+    <button id="btn-newtrack" class="chip">Neue Spur aufmachen</button>
+  </div>
+  <div id="banner" class="hidden"></div>
+
+  <!-- Startbildschirm -->
+  <section id="start" class="panel center">
+    <div class="logo"><span class="n">1001</span><span class="t">Tausendundeins</span></div>
+    <p class="sub">Das Kartenspiel als Brettspiel – Steine legen, Spuren bauen, Hochzeiten melden.</p>
+    <label class="name">Dein Name <input id="name" maxlength="20" placeholder="Spieler" autocomplete="nickname" /></label>
+    <button id="btn-start" class="primary" disabled>Lade Brett …</button>
+    <div class="row-btns"><button id="btn-rules" class="ghost">Regeln</button><button id="btn-board" class="ghost">Rangliste</button></div>
+    <div id="loadbar"><i></i></div>
+  </section>
+
+  <!-- Reizrunde -->
+  <section id="bidding" class="panel dock hidden">
+    <h2>Reizrunde</h2>
+    <p class="hint">Schau dir deine Steine an. Wer am höchsten reizt, spielt aus und muss die Punkte schaffen.</p>
+    <div id="bid-log"></div>
+    <div id="bid-btns"></div>
+  </section>
+
+  <!-- Meldung -->
+  <section id="meld" class="panel center small hidden">
+    <h2 id="meld-title">Hochzeit melden?</h2>
+    <p id="meld-text"></p>
+    <div class="col-btns">
+      <button id="meld-yes" class="primary">Melden &amp; ausspielen</button>
+      <button id="meld-no">Ohne Meldung ausspielen</button>
+      <button id="meld-cancel" class="ghost">Abbrechen</button>
+    </div>
+  </section>
+
+  <!-- Rundenergebnis -->
+  <section id="result" class="panel center hidden">
+    <h2 id="res-title">Rundenende</h2>
+    <table id="res-table"></table>
+    <p id="res-note"></p>
+    <button id="res-next" class="primary">Nächste Runde</button>
+  </section>
+
+  <!-- Partieende -->
+  <section id="matchend" class="panel center hidden">
+    <h2 id="me-title"></h2>
+    <p id="me-text"></p>
+    <p id="me-save" class="muted"></p>
+    <div class="col-btns"><button id="me-new" class="primary">Neue Partie</button><button id="me-board" class="ghost">Rangliste</button></div>
+  </section>
+
+  <section id="help" class="panel center scroll hidden">
+    <h2>So wird gespielt</h2>
+    <div class="help-body">
+      <p><b>Steine:</b> 24 Steine in vier Farben – Karo ♦, Herz ♥, Pik ♠, Kreuz ♣ – mit Ass, Zehn, König, Dame, Bube, Neun. Vor jeder Runde wird komplett neu gemischt.</p>
+      <p><b>Werte:</b> Ass 11 · Zehn 10 · König 4 · Dame 3 · Bube 2 · Neun 0 (zusammen 120).</p>
+      <p><b>Geben:</b> Jeder bekommt 8 Steine (3-2-3), 8 liegen verdeckt als Stock.</p>
+      <p><b>Reizrunde:</b> Vorhand beginnt (wechselt jede Runde). Gereizt wird ab 40 in 20er-Schritten – erhöhen oder passen. Passt die Vorhand, darf der andere 40 reizen; passen beide, spielt die Vorhand 40. Der Reizgewinner spielt den ersten Stich aus und muss mindestens sein Gebot erreichen (Augen + Meldungen). Schafft er es, bekommt er seine Punkte, sonst wird das Gebot abgezogen. Der Gegner schreibt immer seine Punkte.</p>
+      <p><b>Stich:</b> Die höchste Karte der ausgespielten Farbe gewinnt, Trumpf sticht. Am Anfang gibt es keinen Trumpf. Wer den Stich gewinnt, spielt aus und darf eine eigene Spur auf dem Raster aufmachen – die Steine bleiben sichtbar liegen.</p>
+      <p><b>Stock:</b> Nach jedem der ersten vier Stiche ziehen beide nach (Gewinner zuerst). Solange der Stock da ist, darf jeder Stein gelegt werden. Danach gilt: Farbe bedienen, wenn möglich überstechen, sonst trumpfen.</p>
+      <p><b>Hochzeit:</b> Wer ausspielt und König + Dame einer Farbe hat, kann beim Ausspielen melden: Karo 40, Herz 60, Pik 80, Kreuz 100. Diese Farbe wird Trumpf. Jede Farbe nur einmal. Meldungen zählen nur, wenn man in der Runde mindestens einen Stich macht.</p>
+      <p><b>Ziel:</b> Wer zuerst 1001 Punkte hat, gewinnt die Partie.</p>
+      <p class="muted">Steuerung: Stein antippen zum Legen. Brett mit Wischen drehen, mit zwei Fingern / Mausrad zoomen.</p>
+    </div>
+    <button class="primary close">Verstanden</button>
+  </section>
+
+  <section id="menu" class="panel center small hidden">
+    <h2>Menü</h2>
+    <div class="col-btns">
+      <button id="m-resume" class="primary">Weiterspielen</button>
+      <button id="m-cam">Kamera zurücksetzen</button>
+      <button id="m-new">Neue Partie</button>
+      <button id="m-board" class="ghost">Rangliste</button>
+    </div>
+  </section>
+
+  <section id="leader" class="panel center scroll hidden">
+    <h2>Rangliste</h2>
+    <div id="lb-body">Lade …</div>
+    <h3>Deine letzten Partien</h3>
+    <div id="hist-body"></div>
+    <button class="primary close">Schließen</button>
+  </section>
+  <div id="toast" class="hidden"></div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

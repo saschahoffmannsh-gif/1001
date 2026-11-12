@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+.env.*
+*.blend1
+blender/*.blend
+tex/
