@@ -1,4 +1,4 @@
-// Supabase Edge Function "tu" – nur Publishable Key im Client.
+// Card Master – Supabase Edge Function "tu" – nur Publishable Key im Client.
 const FN = 'https://wlujgkbtpjxuekwsgnmg.supabase.co/functions/v1/tu';
 const KEY = 'sb_publishable__YfnUKq2YmpK_t4muHQ6Iw_R1i96s1P';
 const LS = 'tu_player_token';
@@ -26,6 +26,6 @@ async function call(method, params, body) {
 export const api = {
   profile: (display_name) => call('POST', null, { action: 'profile', display_name }),
   result: (r) => call('POST', null, { action: 'result', ...r }),
-  leaderboard: () => call('GET', { action: 'leaderboard' }),
+  leaderboard: (game = 'all') => call('GET', { action: 'leaderboard', game }),
   history: () => call('GET', { action: 'history' }),
 };

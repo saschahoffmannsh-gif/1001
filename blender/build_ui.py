@@ -186,7 +186,7 @@ if not ONLY or 'logo' in ONLY:
     txt = bpy.data.objects.new('LogoText', cu); scene.collection.objects.link(txt); txt.location = (0.78, -0.02, t + 0.03)
     txt.data.materials.append(M_RED); placed_ui.append(txt)
     tile('HA', -3.02, 0.12, z=t, s=0.74, rot=-9); tile('S10', -2.28, -0.08, z=t, s=0.74, rot=6)
-    camera_for(w, h, tilt=20, pad=0.16, ppu=190)
+    camera_for(w, h, tilt=20, pad=0.32, ppu=180)
     render_to('logo.png')
 
 # ---------------------------------------------------------------- Stecker als Symbole
@@ -198,4 +198,5 @@ if not ONLY or 'peg' in ONLY:
         camera_for(0.5, 0.5, tilt=52, pad=0.08, res=(128, 160))
         scene.camera.data.ortho_scale = 0.78; scene.camera.location = Vector((0, 0, 0.28)) + Vector((0, -math.sin(math.radians(52)), math.cos(math.radians(52)))) * 30
         render_to(f'peg{i}.png')
+subprocess.run(['python3', os.path.join(HERE, 'ui_post.py'), OUT], check=True)
 print('UI fertig')

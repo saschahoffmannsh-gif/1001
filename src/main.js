@@ -32,7 +32,7 @@ table.load((p) => { $('loadbar').firstElementChild.style.width = Math.round(p * 
   $('btn-start').disabled = false; $('btn-start').textContent = 'Partie starten';
   $('loadbar').style.opacity = 0;
   if (params.has('hero')) heroScene();
-  if (params.has('autostart')) $('btn-start').click();
+  if (params.has('autostart')) { screen('1001'); $('btn-start').click(); }
 }).catch((e) => { $('btn-start').textContent = 'Fehler beim Laden'; console.error(e); });
 
 $('name').value = localStorage.getItem('tu_name') || '';
@@ -48,12 +48,23 @@ $('btn-start').onclick = async () => {
   if (!TESTRUN) api.profile(name).then((r) => { profile = r.profile; }).catch(() => {});
   newMatch();
 };
-for (const b of document.querySelectorAll('.panel .close')) b.onclick = () => b.closest('.panel').classList.add('hidden');
-$('btn-rules').onclick = $('btn-help').onclick = () => show('help');
+for (const b of document.querySelectorAll('.panel .close, .wpanel .close')) b.onclick = () => b.closest('.panel, .wpanel').classList.add('hidden');
+$('btn-rules').onclick = $('btn-rules2').onclick = $('btn-help').onclick = () => show('help');
+
+// ------------------------------------------------------------ Card Master: Spielauswahl
+function screen(id) { show('scr-home', id === 'home'); show('scr-1001', id === '1001'); }
+for (const g of document.querySelectorAll('#games .game')) g.onclick = () => {
+  if (g.classList.contains('soon')) { toast(`${g.getAttribute('aria-label').split(' –')[0]} kommt später – bald verfügbar.`); return; }
+  localStorage.setItem('tu_name', $('name').value.trim()); screen('1001');
+};
+$('btn-back').onclick = () => screen('home');
+if (params.get('screen') === '1001') screen('1001');
+$('btn-profile').onclick = openProfile;
+
 $('btn-menu').onclick = () => show('menu');
 $('m-resume').onclick = () => show('menu', false);
 $('m-cam').onclick = () => { table.resetCamera(); show('menu', false); };
-$('m-new').onclick = () => { show('menu', false); if (confirm('Aktuelle Partie abbrechen und zum Start zurück?')) { st = null; for (const id of ['result', 'matchend', 'bidding', 'meld', 'discard', 'hud', 'status']) show(id, false); table.clearBoard(); show('start'); } };
+$('m-new').onclick = () => { show('menu', false); if (confirm('Aktuelle Partie abbrechen und zum Start zurück?')) { st = null; for (const id of ['result', 'matchend', 'bidding', 'meld', 'discard', 'hud', 'status']) show(id, false); table.clearBoard(); screen('home'); show('start'); } };
 $('btn-board').onclick = $('m-board').onclick = $('me-board').onclick = openLeaderboard;
 $('btn-newtrack').onclick = () => { forceNewTrack = !forceNewTrack; $('btn-newtrack').classList.toggle('on', forceNewTrack); };
 
@@ -391,26 +402,63 @@ async function matchEnd() {
   try {
     if (!profile) profile = (await api.profile(localStorage.getItem('tu_name') || 'Spieler')).profile;
     const r = await api.result({
-      players, totals: match.totals,
+      game: '1001', players, totals: match.totals,
       human_total: match.totals[0], computer_total: Math.max(...match.totals.slice(1)), winner: w === 0 ? 'human' : 'computer',
       duration_s: Math.min(86400, Math.round((Date.now() - matchStart) / 1000)),
       deals: match.deals.map((d) => ({ bidder: d.bidder, bid: d.bid, made: d.made, delta: d.delta, melds: d.meldPoints })),
     });
     profile = r.profile;
-    $('me-save').textContent = `Gespeichert · Bilanz ${profile.wins} Siege / ${profile.losses} Niederlagen`;
+    const g = (r.stats || []).find((x) => x.game === '1001') || profile;
+    $('me-save').textContent = `Gespeichert · 1001-Bilanz ${g.wins} Siege / ${g.losses} Niederlagen`;
   } catch (e) { $('me-save').textContent = 'Nicht gespeichert: ' + e.message; }
 }
 
+const GAME_INFO = { '1001': { name: '1001', img: 'game_1001' }, romme: { name: 'Rommé', img: 'game_romme', soon: true },
+  skat: { name: 'Skat', img: 'game_skat', soon: true }, bridge: { name: 'Bridge', img: 'game_bridge', soon: true } };
+let lbGame = 'all';
+for (const t of document.querySelectorAll('#lb-tabs button')) t.onclick = () => { if (!t.disabled) { lbGame = t.dataset.game; loadBoard(); } };
 async function openLeaderboard() {
-  show('menu', false); show('leader'); $('lb-body').textContent = 'Lade …'; $('hist-body').textContent = '';
-  try {
-    const { leaderboard } = await api.leaderboard();
-    $('lb-body').innerHTML = leaderboard.length ? `<table class="lb">${leaderboard.map((r, i) => `<tr><td>${i + 1}.</td><td>${esc(r.display_name)}</td><td class="n">${r.wins} S</td><td class="n">${r.losses} N</td><td class="n">best ${r.best_total}</td></tr>`).join('')}</table>` : '<p class="muted">Noch keine Partien gespeichert.</p>';
-  } catch (e) { $('lb-body').textContent = e.message; }
+  show('menu', false); show('profile', false); show('leader'); $('hist-body').textContent = '';
+  loadBoard();
   try {
     const { history } = await api.history();
-    $('hist-body').innerHTML = history.length ? `<table class="lb">${history.map((h) => `<tr><td>${new Date(h.created_at).toLocaleDateString('de-DE')}</td><td>${h.winner === 'human' ? 'Sieg' : 'Niederlage'}</td><td class="n">${h.human_total}:${h.computer_total}</td><td class="n">${h.deals} R.</td></tr>`).join('')}</table>` : '<p class="muted">Noch keine eigenen Partien.</p>';
-  } catch { $('hist-body').innerHTML = '<p class="muted">Noch keine eigenen Partien.</p>'; }
+    $('hist-body').innerHTML = history.length ? `<table class="lb">${history.map((h) => `<tr><td>${new Date(h.created_at).toLocaleDateString('de-DE')}</td><td>${esc(GAME_INFO[h.game || '1001']?.name || h.game)}</td><td>${h.winner === 'human' ? 'Sieg' : 'Niederlage'}</td><td class="n">${h.human_total}:${h.computer_total}</td><td class="n">${h.deals} R.</td></tr>`).join('')}</table>` : '<p class="engr-s">Noch keine eigenen Partien.</p>';
+  } catch { $('hist-body').innerHTML = '<p class="engr-s">Noch keine eigenen Partien.</p>'; }
+}
+async function loadBoard() {
+  for (const t of document.querySelectorAll('#lb-tabs button')) {
+    const on = t.dataset.game === lbGame; t.classList.toggle('on', on); t.classList.toggle('teal', on); t.classList.toggle('wood', !on);
+  }
+  $('lb-note').textContent = lbGame === 'all'
+    ? 'Gesamtwertung über alle Spiele: Siege zählen. Bei Gleichstand: weniger Niederlagen, dann wer zuletzt gespielt hat.'
+    : `Wertung ${GAME_INFO[lbGame].name}: Siege, bei Gleichstand die beste Punktzahl.`;
+  $('lb-body').innerHTML = '<p class="engr-s">Lade …</p>';
+  const want = lbGame;
+  try {
+    const { leaderboard } = await api.leaderboard(want);
+    if (want !== lbGame) return;
+    const me = (localStorage.getItem('tu_name') || '').trim();
+    const head = want === 'all'
+      ? '<tr><th></th><th>Name</th><th class="n">Siege</th><th class="n">Niederl.</th><th class="n">Partien</th></tr>'
+      : '<tr><th></th><th>Name</th><th class="n">Siege</th><th class="n">Niederl.</th><th class="n">Bestwert</th></tr>';
+    $('lb-body').innerHTML = leaderboard.length ? `<table class="lb">${head}${leaderboard.map((r) => `<tr class="${me && r.display_name === me ? 'me' : ''}"><td class="rk">${r.rank}.</td><td>${esc(r.display_name)}</td><td class="n"><b>${r.wins}</b></td><td class="n">${r.losses}</td><td class="n">${want === 'all' ? r.matches_played : r.best_total}</td></tr>`).join('')}</table>` : '<p class="engr-s">Noch keine Partien gespeichert – gewinne die erste!</p>';
+  } catch (e) { $('lb-body').innerHTML = `<p class="engr-s">${esc(e.message)}</p>`; }
+}
+async function openProfile() {
+  show('leader', false); show('profile');
+  const name = ($('name').value || localStorage.getItem('tu_name') || '').trim();
+  $('pf-name').textContent = name || 'Spieler'; $('pf-note').textContent = 'Lade …';
+  let stats = [], prof = null;
+  try { const r = await api.history(); stats = r.stats || []; prof = r.profile; $('pf-note').textContent = ''; }
+  catch { $('pf-note').textContent = 'Noch kein Profil gespeichert – es entsteht mit deiner ersten Partie.'; }
+  if (prof) $('pf-name').textContent = prof.display_name;
+  const sum = (k) => stats.reduce((a, x) => a + (x[k] | 0), 0);
+  $('pf-wins').textContent = sum('wins'); $('pf-losses').textContent = sum('losses'); $('pf-matches').textContent = sum('matches_played');
+  $('pf-games').innerHTML = Object.entries(GAME_INFO).map(([id, g]) => {
+    const x = stats.find((s) => s.game === id);
+    const line = g.soon ? 'Bald verfügbar' : x ? `${x.wins} Siege · ${x.losses} Niederlagen · ${x.matches_played} Partien · Bestwert ${x.best_total}` : 'Noch keine Partie';
+    return `<div class="pf-game${g.soon ? ' soon' : ''}"><img src="${import.meta.env.BASE_URL}assets/ui/${g.img}.webp" alt=""><div><b>${esc(g.name)}</b><div class="st">${line}</div></div></div>`;
+  }).join('');
 }
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 

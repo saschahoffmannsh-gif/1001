@@ -4,8 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#efe5d8" />
-<title>1001 – Tausendundeins</title>
-<meta name="description" content="Tausendundeins als Brettspiel: Steine statt Karten, Spuren auf dem Raster, Reizrunde und Hochzeiten – gegen den Computer." />
+<title>Card Master – Brettspiel-Sammlung</title>
+<meta name="description" content="Card Master – Kartenspiele als Brettspiel. Zuerst 1001 (Tausendundeins): Steine statt Karten, Spuren auf dem Raster, Reizrunde und Hochzeiten – gegen den Computer." />
 <link rel="icon" type="image/png" href="/assets/tex/tile_HA.png" />
 </head>
 <body>
@@ -34,20 +34,43 @@
   </div>
   <div id="banner" class="hidden"></div>
 
-  <!-- Startbildschirm -->
-  <section id="start" class="panel center">
-    <div class="logo"><span class="n">1001</span><span class="t">Tausendundeins</span></div>
-    <p class="sub">Das Kartenspiel als Brettspiel – Steine legen, Spuren bauen, Hochzeiten melden.</p>
-    <div class="pcount-lbl">Mitspieler</div>
-    <div id="pcount" class="pcount">
-      <button data-n="2"><b>2 Spieler</b><span>du gegen 1 Computer</span><em>24 Steine</em></button>
-      <button data-n="3"><b>3 Spieler</b><span>du gegen 2 Computer</span><em>32 Steine · mit 7 und 8</em></button>
-      <button data-n="4"><b>4 Spieler</b><span>du gegen 3 Computer</span><em>32 Steine · mit 7 und 8</em></button>
+  <!-- Card Master: Startbildschirm mit Spielauswahl -->
+  <section id="start" class="shell">
+    <div class="shell-in">
+      <h1 class="cm-logo"><img src="/assets/ui/logo.webp" alt="Card Master" width="1504" height="445" /></h1>
+
+      <div id="scr-home" class="scr">
+        <label class="nameslot wbtn ivory" for="name"><span class="engr">Spielername</span><input id="name" maxlength="20" placeholder="Spieler" autocomplete="nickname" /></label>
+        <div class="lbl engr-l">Spiel wählen</div>
+        <div id="games" class="games">
+          <button class="game" data-game="1001" aria-label="1001 spielen – 2 bis 4 Spieler"><img src="/assets/ui/game_1001.webp" alt="" width="706" height="554" /></button>
+          <button class="game soon" data-game="romme" aria-disabled="true" aria-label="Rommé – bald verfügbar"><img src="/assets/ui/game_romme.webp" alt="" width="706" height="554" /></button>
+          <button class="game soon" data-game="skat" aria-disabled="true" aria-label="Skat – bald verfügbar"><img src="/assets/ui/game_skat.webp" alt="" width="706" height="554" /></button>
+          <button class="game soon" data-game="bridge" aria-disabled="true" aria-label="Bridge – bald verfügbar"><img src="/assets/ui/game_bridge.webp" alt="" width="706" height="554" /></button>
+        </div>
+        <div class="shell-btns">
+          <button id="btn-profile" class="wbtn wood">Profil</button>
+          <button id="btn-board" class="wbtn wood">Rangliste</button>
+          <button id="btn-rules" class="wbtn wood">Regeln</button>
+        </div>
+      </div>
+
+      <div id="scr-1001" class="scr hidden">
+        <div class="wpanel setup">
+          <h2 class="engr">1001 <small>Tausendundeins</small></h2>
+          <p class="engr-s">Steine legen, Spuren bauen, Hochzeiten melden.</p>
+          <div class="lbl engr-l">Mitspieler</div>
+          <div id="pcount" class="pcount">
+            <button data-n="2" class="wbtn ivory"><span class="pegs"><img src="/assets/ui/peg0.webp" alt=""><img src="/assets/ui/peg1.webp" alt=""></span><b>2 Spieler</b><span>1 Computer<br>24 Steine</span></button>
+            <button data-n="3" class="wbtn ivory"><span class="pegs"><img src="/assets/ui/peg0.webp" alt=""><img src="/assets/ui/peg1.webp" alt=""><img src="/assets/ui/peg2.webp" alt=""></span><b>3 Spieler</b><span>2 Computer<br>32 Steine</span></button>
+            <button data-n="4" class="wbtn ivory"><span class="pegs"><img src="/assets/ui/peg0.webp" alt=""><img src="/assets/ui/peg1.webp" alt=""><img src="/assets/ui/peg2.webp" alt=""><img src="/assets/ui/peg3.webp" alt=""></span><b>4 Spieler</b><span>3 Computer<br>32 Steine</span></button>
+          </div>
+          <button id="btn-start" class="wbtn red big" disabled>Lade Brett …</button>
+          <div class="shell-btns two"><button id="btn-back" class="wbtn wood">Zurück</button><button id="btn-rules2" class="wbtn wood">Regeln</button></div>
+          <div id="loadbar"><i></i></div>
+        </div>
+      </div>
     </div>
-    <label class="name">Dein Name <input id="name" maxlength="20" placeholder="Spieler" autocomplete="nickname" /></label>
-    <button id="btn-start" class="primary" disabled>Lade Brett …</button>
-    <div class="row-btns"><button id="btn-rules" class="ghost">Regeln</button><button id="btn-board" class="ghost">Rangliste</button></div>
-    <div id="loadbar"><i></i></div>
   </section>
 
   <!-- Reizrunde -->
@@ -99,7 +122,7 @@
   </section>
 
   <section id="help" class="panel center scroll hidden">
-    <h2>So wird gespielt</h2>
+    <h2>1001 – so wird gespielt</h2>
     <div class="help-body">
       <p><b>Steine:</b> Vier Farben – Karo ♦, Herz ♥, Pik ♠, Kreuz ♣. <b>2 Spieler:</b> 24 Steine (Ass, Zehn, König, Dame, Bube, Neun). <b>Ab 3 Spielern:</b> 32 Steine – zusätzlich alle Achten und Siebenen. Vor jeder Runde wird komplett neu gemischt.</p>
       <p><b>Werte:</b> Ass 11 · Zehn 10 · König 4 · Dame 3 · Bube 2 · Neun, Acht, Sieben je 0 – zusammen immer 120. <b>Rangfolge:</b> Ass &gt; Zehn &gt; König &gt; Dame &gt; Bube &gt; Neun &gt; Acht &gt; Sieben.</p>
@@ -126,12 +149,34 @@
     </div>
   </section>
 
-  <section id="leader" class="panel center scroll hidden">
-    <h2>Rangliste</h2>
+  <section id="leader" class="wpanel center scroll hidden">
+    <h2 class="engr">Card Master Rangliste</h2>
+    <div id="lb-tabs" class="tabs">
+      <button data-game="all" class="wbtn teal on">Card Master</button>
+      <button data-game="1001" class="wbtn wood">1001</button>
+      <button data-game="romme" class="wbtn wood soon" disabled>Rommé <i>bald</i></button>
+      <button data-game="skat" class="wbtn wood soon" disabled>Skat <i>bald</i></button>
+      <button data-game="bridge" class="wbtn wood soon" disabled>Bridge <i>bald</i></button>
+    </div>
+    <p id="lb-note" class="engr-s"></p>
     <div id="lb-body">Lade …</div>
-    <h3>Deine letzten Partien</h3>
+    <h3 class="engr-l">Deine letzten Partien</h3>
     <div id="hist-body"></div>
-    <button class="primary close">Schließen</button>
+    <button class="wbtn red close">Schließen</button>
+  </section>
+
+  <section id="profile" class="wpanel center scroll hidden">
+    <h2 class="engr">Dein Profil</h2>
+    <div id="pf-name" class="pf-name engr"></div>
+    <div class="pf-total">
+      <div><b id="pf-wins">0</b><span>Siege</span></div>
+      <div><b id="pf-losses">0</b><span>Niederlagen</span></div>
+      <div><b id="pf-matches">0</b><span>Partien</span></div>
+    </div>
+    <h3 class="engr-l">Je Spiel</h3>
+    <div id="pf-games"></div>
+    <p id="pf-note" class="engr-s"></p>
+    <button class="wbtn red close">Schließen</button>
   </section>
   <div id="toast" class="hidden"></div>
 </div>
