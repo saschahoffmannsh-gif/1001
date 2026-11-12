@@ -1,51 +1,69 @@
 // Computer-Gegner: nutzt nur eigene Hand + offen gespielte/gemeldete Steine.
 export let AI_SEARCH_DEPTH = 7;
 export function setSearchDepth(n) { AI_SEARCH_DEPTH = n; }
-import { SUITS, RANKS, MARRIAGE, BID_MIN, BID_STEP, suitOf, rankOf, valueOf, strength, other, newDeck,
-  legalMoves, trickWinner, declarableSuits, auctionOptions, minBid } from './rules.js';
+import { SUITS, RANKS, MARRIAGE, BID_MIN, BID_STEP, BID_MAX, suitOf, rankOf, valueOf, strength, other, newDeck,
+  legalMoves, trickWinner, currentWinner, declarableSuits, auctionOptions, minBid } from './rules.js';
 
 // ------------------------------------------------------------ Wissen des Computers
+// Jeder Computer kennt nur: eigene Hand, gespielte Steine, gemeldete Hochzeiten, eigene gedrückte Steine.
 export function knowledge(st, p) {
+  const n = st.n || 2;
   const seen = new Set(st.hands[p]);
-  for (const h of st.history) { seen.add(h.lead.card); seen.add(h.follow.card); }
+  for (const h of st.history) for (const t of (h.cards || [h.lead, h.follow])) seen.add(t.card);
   for (const t of st.trick) seen.add(t.card);
-  // Gemeldete Hochzeiten verraten den Partner auf der Gegnerhand
+  if (st.contract && st.contract.by === p) for (const c of st.discard || []) seen.add(c);
+  // Gemeldete Hochzeiten verraten den Partner auf einer Gegnerhand
   const knownOpp = new Set();
-  const o = other(p);
-  for (const s of st.melds[o]) {
-    for (const r of ['K', 'Q']) {
-      const c = s + r;
-      const played = st.history.some((h) => h.lead.card === c || h.follow.card === c) || st.trick.some((t) => t.card === c);
-      if (!played) knownOpp.add(c);
-    }
+  for (let o = 0; o < n; o++) {
+    if (o === p) continue;
+    for (const s of st.melds[o]) for (const r of ['K', 'Q']) { const c = s + r; if (!seen.has(c)) knownOpp.add(c); }
   }
-  const unseen = newDeck().filter((c) => !seen.has(c));
-  return { unseen, knownOpp, oppCount: st.hands[o].length, stockCount: st.stock.length };
+  const unseen = newDeck(n).filter((c) => !seen.has(c));
+  let oppCount = 0; for (let o = 0; o < n; o++) if (o !== p) oppCount += st.hands[o].length;
+  return { unseen, knownOpp, oppCount, stockCount: st.stock.length };
 }
 
 // ------------------------------------------------------------ Reizen
-export function handEstimate(hand, unseenAll) {
-  let est = 24;
-  for (const c of hand) est += { A: 11.5, '10': 8.5, K: 3.5, Q: 2.5, J: 1.5, '9': 0.5 }[rankOf(c)];
+// Grundwert je Spielerzahl (mit tools/sim.mjs kalibriert): mehr Gegner = weniger Augen pro Hand
+export const EST_BASE = { 2: 24, 3: -6, 4: -16 };
+export function handEstimate(hand, n = 2) {
+  let est = EST_BASE[n] ?? 24;
+  for (const c of hand) est += { A: 11.5, '10': 8.5, K: 3.5, Q: 2.5, J: 1.5, '9': 0.5, '8': 0.3, '7': 0.2 }[rankOf(c)];
+  const partnerChance = n === 2 ? 0.12 : n === 3 ? 0.05 : 0;      // Partner könnte aus Stock/Talon kommen
   for (const s of SUITS) {
     const k = hand.includes(s + 'K'), q = hand.includes(s + 'Q');
     if (k && q) est += MARRIAGE[s] * 0.85;
-    else if (k || q) est += MARRIAGE[s] * 0.12; // Partner koennte aus dem Stock kommen
-    const n = hand.filter((c) => suitOf(c) === s).length;
-    if (n >= 4) est += 4;
+    else if (k || q) est += MARRIAGE[s] * partnerChance;
+    const m = hand.filter((c) => suitOf(c) === s).length;
+    if (m >= 4) est += 4;
   }
   return est;
 }
-export function maxBidFor(hand) {
-  const est = handEstimate(hand);
+export function maxBidFor(hand, n = 2) {
+  const est = handEstimate(hand, n);
   return Math.floor((est - 8) / BID_STEP) * BID_STEP;
 }
+// Reizen nacheinander: nur genau +10 oder passen
 export function chooseBid(st, p) {
-  const a = st.auction;
-  const limit = maxBidFor(st.hands[p]);
-  const need = minBid(a);
-  if (need <= limit) return need;            // minimal erhöhen
-  return 'pass';
+  const limit = maxBidFor(st.hands[p], st.n || 2);
+  const need = minBid(st.auction);
+  return need <= Math.min(limit, BID_MAX) ? need : 'pass';
+}
+// 3 Spieler: Reizgewinner drückt 2 Steine (zählen für ihn). Blanke Zehnen und kurze Farben bevorzugt.
+export function chooseDiscard(st, p, count = 2) {
+  const hand = st.hands[p];
+  const scored = hand.map((c) => {
+    const s = suitOf(c), r = rankOf(c);
+    const inSuit = hand.filter((x) => suitOf(x) === s);
+    let v = 0;
+    if ((r === 'K' || r === 'Q') && hand.includes(s + (r === 'K' ? 'Q' : 'K'))) v -= 100;   // Hochzeit behalten
+    if (r === 'A') v -= 30;                                                                     // Asse stechen selbst
+    if (r === '10') v += hand.includes(s + 'A') ? -10 : 14;                                     // blanke Zehn sichern
+    v += valueOf(c) * 0.5 + (5 - inSuit.length) * 2 - strength(c) * 0.3;
+    return { c, v };
+  });
+  scored.sort((a, b) => b.v - a.v);
+  return scored.slice(0, count).map((x) => x.c);
 }
 
 // ------------------------------------------------------------ Hilfen
@@ -146,15 +164,13 @@ function solveChoice(st, p, legal, oppHand) {
 // ------------------------------------------------------------ Zugwahl
 export function chooseMove(st, p) {
   const hand = st.hands[p];
-  const legal = (() => {
-    const lead = st.trick.length ? st.trick[0].card : null;
-    return legalMoves(hand, lead, st.trump, st.stock.length === 0);
-  })();
+  const n = st.n || 2;
+  const legal = legalMoves(hand, st.trick.map((t) => t.card), st.trump, st.stock.length === 0);
   const K = knowledge(st, p);
   const trump = st.trump;
 
   // Stock leer: Gegnerhand ist durch Mitzählen bekannt -> exakte Suche (ab 6 Steinen je Hand)
-  if (st.stock.length === 0 && hand.length <= AI_SEARCH_DEPTH) {
+  if (n === 2 && st.stock.length === 0 && hand.length <= AI_SEARCH_DEPTH) {
     const oppHand = K.unseen;  // genau die Gegnerhand
     const choice = solveChoice(st, p, legal, oppHand);
     if (choice) return choice;
@@ -181,13 +197,16 @@ export function chooseMove(st, p) {
   }
 
   // Bedienen / Stechen
-  const lead = st.trick[0];
-  const L = lead.card;
   const ownMarriage = declarableSuitsAfterLead(hand, st);
+  const later = n - st.trick.length - 1;                    // wie viele nach mir noch legen
+  const sofar = st.trick.reduce((a, t) => a + valueOf(t.card), 0);
   const opts = legal.map((c) => {
-    const w = trickWinner(lead, { p, card: c }, trump) === p;
-    const pts = valueOf(L) + valueOf(c);
-    let score = w ? pts : -pts;
+    const nowW = currentWinner([...st.trick, { p, card: c }], trump).p === p;
+    // Risiko, dass ein Späterer noch drüber geht (nur grob, aus den ungesehenen Steinen)
+    const risk = nowW && later > 0 ? pBeatByOpp(c, trump, K.unseen, K.knownOpp, Math.min(K.oppCount, later * 3)) : 0;
+    const w = nowW && risk < 0.5;
+    const pts = sofar + valueOf(c);
+    let score = nowW ? pts * (1 - 2 * risk) : -pts;
     // eigene Werte schonen / Hochzeiten nicht zerreißen
     score -= marriagePotential(c, hand, st, K.unseen) * (w ? 0.35 : 0.7);
     if (trump && suitOf(c) === trump) score -= (st.stock.length ? 4 : 1) + strength(c) * 0.8;
