@@ -13,21 +13,18 @@
   <div id="stage"></div>
 
   <header id="hud" class="hidden">
-    <div class="score-card">
-      <div class="row you"><span class="dot red"></span><span class="lbl">Du</span><b id="sc-0">0</b></div>
-      <div class="row cpu"><span class="dot dark"></span><span class="lbl">Computer</span><b id="sc-1">0</b></div>
-      <div class="goal">Ziel 1001</div>
-    </div>
-    <div class="info-card">
-      <div><span class="k">Reiz</span><b id="i-bid">–</b></div>
-      <div><span class="k">Trumpf</span><b id="i-trump">keiner</b></div>
-      <div><span class="k">Stich</span><b id="i-trick">0/12</b></div>
-      <div><span class="k">Stock</span><b id="i-stock">8</b></div>
-      <div class="deal-pts"><span class="k">Runde</span><b id="i-round">Du 0 · CPU 0</b></div>
-    </div>
-    <div class="top-btns">
-      <button id="btn-help" class="icon" title="Regeln">?</button>
-      <button id="btn-menu" class="icon" title="Menü">☰</button>
+    <div class="plank">
+      <div id="hud-players" class="players"></div>
+      <div class="stats">
+        <div class="stat"><span class="k">Reiz</span><b id="i-bid">–</b></div>
+        <div class="stat trump"><span class="k">Trumpf</span><b id="i-trump">–</b></div>
+        <div class="stat"><span class="k">Stich</span><b id="i-trick">0/12</b></div>
+        <div class="stat" id="stat-stock"><span class="k">Stock</span><b id="i-stock">8</b></div>
+        <div class="top-btns">
+          <button id="btn-help" class="knob" title="Regeln" aria-label="Regeln">?</button>
+          <button id="btn-menu" class="knob" title="Menü" aria-label="Menü">☰</button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -41,6 +38,12 @@
   <section id="start" class="panel center">
     <div class="logo"><span class="n">1001</span><span class="t">Tausendundeins</span></div>
     <p class="sub">Das Kartenspiel als Brettspiel – Steine legen, Spuren bauen, Hochzeiten melden.</p>
+    <div class="pcount-lbl">Mitspieler</div>
+    <div id="pcount" class="pcount">
+      <button data-n="2"><b>2 Spieler</b><span>du gegen 1 Computer</span><em>24 Steine</em></button>
+      <button data-n="3"><b>3 Spieler</b><span>du gegen 2 Computer</span><em>32 Steine · mit 7 und 8</em></button>
+      <button data-n="4"><b>4 Spieler</b><span>du gegen 3 Computer</span><em>32 Steine · mit 7 und 8</em></button>
+    </div>
     <label class="name">Dein Name <input id="name" maxlength="20" placeholder="Spieler" autocomplete="nickname" /></label>
     <button id="btn-start" class="primary" disabled>Lade Brett …</button>
     <div class="row-btns"><button id="btn-rules" class="ghost">Regeln</button><button id="btn-board" class="ghost">Rangliste</button></div>
@@ -48,11 +51,24 @@
   </section>
 
   <!-- Reizrunde -->
-  <section id="bidding" class="panel dock hidden">
-    <h2>Reizrunde</h2>
-    <p class="hint">Schau dir deine Steine an. Wer am höchsten reizt, spielt aus und muss die Punkte schaffen.</p>
-    <div id="bid-log"></div>
-    <div id="bid-btns"></div>
+  <section id="bidding" class="plaque dock hidden">
+    <div class="plaque-head"><h2>Reizrunde</h2><span class="rule">immer +10 · ab 40</span></div>
+    <div id="bid-seats" class="seats"></div>
+    <div class="bid-mid">
+      <div id="bid-high" class="bid-high"></div>
+      <div id="bid-log" class="bid-log"></div>
+    </div>
+    <div class="bid-btns">
+      <button id="bid-up" class="tile-btn red" disabled>Reizen: <b>40</b></button>
+      <button id="bid-pass" class="tile-btn ivory" disabled>Passen</button>
+    </div>
+  </section>
+
+  <!-- 3 Spieler: Drücken -->
+  <section id="discard" class="plaque dock small hidden">
+    <div class="plaque-head"><h2>Talon aufgenommen</h2><span class="rule">2 Steine drücken</span></div>
+    <p class="hint">Tippe zwei Steine an, die du verdeckt ablegst. Ihre Augen zählen für dich.</p>
+    <div class="bid-btns"><span id="disc-count" class="disc-count">0 von 2 gewählt</span><button id="disc-ok" class="tile-btn red" disabled>Drücken</button></div>
   </section>
 
   <!-- Meldung -->
@@ -85,12 +101,14 @@
   <section id="help" class="panel center scroll hidden">
     <h2>So wird gespielt</h2>
     <div class="help-body">
-      <p><b>Steine:</b> 24 Steine in vier Farben – Karo ♦, Herz ♥, Pik ♠, Kreuz ♣ – mit Ass, Zehn, König, Dame, Bube, Neun. Vor jeder Runde wird komplett neu gemischt.</p>
-      <p><b>Werte:</b> Ass 11 · Zehn 10 · König 4 · Dame 3 · Bube 2 · Neun 0 (zusammen 120).</p>
-      <p><b>Geben:</b> Jeder bekommt 8 Steine (3-2-3), 8 liegen verdeckt als Stock.</p>
-      <p><b>Reizrunde:</b> Vorhand beginnt (wechselt jede Runde). Gereizt wird ab 40 in 20er-Schritten – erhöhen oder passen. Passt die Vorhand, darf der andere 40 reizen; passen beide, spielt die Vorhand 40. Der Reizgewinner spielt den ersten Stich aus und muss mindestens sein Gebot erreichen (Augen + Meldungen). Schafft er es, bekommt er seine Punkte, sonst wird das Gebot abgezogen. Der Gegner schreibt immer seine Punkte.</p>
+      <p><b>Steine:</b> Vier Farben – Karo ♦, Herz ♥, Pik ♠, Kreuz ♣. <b>2 Spieler:</b> 24 Steine (Ass, Zehn, König, Dame, Bube, Neun). <b>Ab 3 Spielern:</b> 32 Steine – zusätzlich alle Achten und Siebenen. Vor jeder Runde wird komplett neu gemischt.</p>
+      <p><b>Werte:</b> Ass 11 · Zehn 10 · König 4 · Dame 3 · Bube 2 · Neun, Acht, Sieben je 0 – zusammen immer 120. <b>Rangfolge:</b> Ass &gt; Zehn &gt; König &gt; Dame &gt; Bube &gt; Neun &gt; Acht &gt; Sieben.</p>
+      <p><b>Geben (2 Spieler):</b> Jeder bekommt 8 Steine (3-2-3), 8 liegen verdeckt als Stock zum Nachziehen.</p>
+      <p><b>Geben (3 Spieler):</b> Jeder bekommt 10 Steine (3-4-3), 2 Steine liegen verdeckt als Talon. Der Reizgewinner nimmt den Talon auf und drückt danach 2 beliebige Steine verdeckt – deren Augen zählen für ihn. Es gibt 10 Stiche zu je 3 Steinen.</p>
+      <p><b>Geben (4 Spieler):</b> Jeder bekommt 8 Steine (3-2-3), kein Stock. 8 Stiche zu je 4 Steinen.</p>
+      <p><b>Reizrunde:</b> Die Vorhand beginnt, die Vorhand wandert jede Runde einen Platz weiter. Gereizt wird reihum und nacheinander: Eröffnung 40, danach darf jeder nur um genau 10 erhöhen (40, 50, 60, 70 …) oder passen. Wer gepasst hat, ist raus. Haben alle anderen gepasst, gewinnt das höchste Gebot. Passen alle, muss die Vorhand 40 spielen. Der Reizgewinner spielt den ersten Stich aus und muss mindestens sein Gebot erreichen (Augen + Meldungen) – sonst wird das Gebot abgezogen. Alle anderen schreiben ihre eigenen Punkte.</p>
       <p><b>Stich:</b> Die höchste Karte der ausgespielten Farbe gewinnt, Trumpf sticht. Am Anfang gibt es keinen Trumpf. Wer den Stich gewinnt, spielt aus und darf eine eigene Spur auf dem Raster aufmachen – die Steine bleiben sichtbar liegen.</p>
-      <p><b>Stock:</b> Nach jedem der ersten vier Stiche ziehen beide nach (Gewinner zuerst). Solange der Stock da ist, darf jeder Stein gelegt werden. Danach gilt: Farbe bedienen, wenn möglich überstechen, sonst trumpfen.</p>
+      <p><b>Stock (2 Spieler):</b> Nach jedem der ersten vier Stiche ziehen beide nach (Gewinner zuerst). Solange der Stock da ist, darf jeder Stein gelegt werden. Danach gilt: Farbe bedienen, wenn möglich überstechen, sonst trumpfen. <b>Ab 3 Spielern</b> gilt diese Pflicht vom ersten Stich an.</p>
       <p><b>Hochzeit:</b> Wer ausspielt und König + Dame einer Farbe hat, kann beim Ausspielen melden: Karo 40, Herz 60, Pik 80, Kreuz 100. Diese Farbe wird Trumpf. Jede Farbe nur einmal. Meldungen zählen nur, wenn man in der Runde mindestens einen Stich macht.</p>
       <p><b>Ziel:</b> Wer zuerst 1001 Punkte hat, gewinnt die Partie.</p>
       <p class="muted">Steuerung: Stein antippen zum Legen. Brett mit Wischen drehen, mit zwei Fingern / Mausrad zoomen.</p>

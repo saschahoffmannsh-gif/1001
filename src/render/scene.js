@@ -275,7 +275,7 @@ export class Table {
 
   liftHand(card, on) {
     const m = this.tiles.get(card); if (!m) return;
-    m.userData.lift = on ? 0.22 : 0; this.layoutHand(true);
+    const base = m.userData.sel ? 0.34 : 0; m.userData.lift = on ? Math.max(0.22, base) : base; this.layoutHand(true);
   }
   setPlayable(cards, legal) {
     this.pickable = new Set(legal);
