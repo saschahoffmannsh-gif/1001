@@ -64,7 +64,7 @@ $('btn-profile').onclick = openProfile;
 $('btn-menu').onclick = () => show('menu');
 $('m-resume').onclick = () => show('menu', false);
 $('m-cam').onclick = () => { table.resetCamera(); show('menu', false); };
-$('m-new').onclick = () => { show('menu', false); if (confirm('Aktuelle Partie abbrechen und zum Start zurück?')) { st = null; for (const id of ['result', 'matchend', 'bidding', 'meld', 'discard', 'hud', 'status']) show(id, false); table.clearBoard(); screen('home'); show('start'); } };
+$('m-new').onclick = () => { show('menu', false); if (confirm('Aktuelle Partie abbrechen und zur Spielauswahl zurück?')) { st = null; for (const id of ['result', 'matchend', 'bidding', 'meld', 'discard', 'hud', 'status']) show(id, false); table.clearBoard(); screen('home'); show('start'); } };
 $('btn-board').onclick = $('m-board').onclick = $('me-board').onclick = openLeaderboard;
 $('btn-newtrack').onclick = () => { forceNewTrack = !forceNewTrack; $('btn-newtrack').classList.toggle('on', forceNewTrack); };
 
