@@ -1,7 +1,8 @@
-// Tausendundeins (1001) Edge Function. Berührt nur tu_* Tabellen.
+// Card Master Edge Function (Spiele-Sammlung, zuerst 1001). Berührt nur tu_* Tabellen.
 // Service-Role bleibt auf dem Server (env), nie im Spiel-Client.
 // Spiel gegen den Computer läuft komplett im Client; hier: Profil, Ergebnisse, Rangliste, Verlauf.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { GAMES, GAME_IDS, normGame, isKnownGame, acceptsResults, aggregateOverall, rankGame, applyResult } from "./ranking.js";
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -98,16 +99,16 @@ async function actProfile(req: Request, body: Record<string, unknown>) {
       const { data, error } = await db.from("tu_profiles").update({ display_name: name, updated_at: new Date().toISOString() })
         .eq("id", existing.id).select(PROFILE_COLS).single();
       if (error) fail(500, "Serverfehler (Profil)");
-      return json({ profile: data });
+      return json({ profile: data, stats: await statsFor(existing.id) });
     }
-    return json({ profile: existing });
+    return json({ profile: existing, stats: await statsFor(existing.id) });
   }
   await rateLimit(req, "profile");
   const { data, error } = await db.from("tu_profiles")
     .insert({ token_hash: await sha256hex(token), display_name: sanitizeName(body.display_name) })
     .select(PROFILE_COLS).single();
   if (error) fail(500, "Profil konnte nicht angelegt werden");
-  return json({ profile: data, created: true });
+  return json({ profile: data, stats: [], created: true });
 }
 
 type DealRow = { bidder: number; bid: number; made: boolean; delta: number[]; melds?: number[] };
@@ -117,6 +118,9 @@ async function actResult(req: Request, body: Record<string, unknown>) {
   const prof = await profileByToken(token);
   if (!prof) fail(404, "Profil nicht gefunden – bitte Seite neu laden");
   await rateLimit(req, "result");
+  const game = normGame(body.game);
+  if (!isKnownGame(game)) fail(400, "Unbekanntes Spiel");
+  if (!acceptsResults(game)) fail(400, `${GAMES[game as keyof typeof GAMES].name} kann noch nicht gewertet werden – bald verfügbar`);
   const players = body.players === undefined ? 2 : int(body.players, "Spielerzahl", 2, 4);
   const humanTotal = int(body.human_total, "Punkte (Du)", -5000, 5000);
   const cpuTotal = int(body.computer_total, "Punkte (Computer)", -5000, 5000);
@@ -147,7 +151,7 @@ async function actResult(req: Request, body: Record<string, unknown>) {
   if (winTotal < TARGET) fail(400, "Sieger hat 1001 nicht erreicht");
   const durationS = body.duration_s === undefined ? 0 : int(body.duration_s, "Dauer", 0, 86400);
   const { data: m, error } = await db.from("tu_matches").insert({
-    profile_id: prof!.id, human_total: h, computer_total: c, winner, deals: log.length, players, totals: tot,
+    profile_id: prof!.id, game, human_total: h, computer_total: c, winner, deals: log.length, players, totals: tot,
     bids_won: bidsWon, bids_made: bidsMade, highest_bid: highest, melds, deal_log: log, duration_s: durationS,
   }).select("id,created_at").single();
   if (error) fail(500, "Ergebnis konnte nicht gespeichert werden");
@@ -157,22 +161,40 @@ async function actResult(req: Request, body: Record<string, unknown>) {
     deals_played: prof!.deals_played + log.length, best_total: Math.max(prof!.best_total, h), updated_at: new Date().toISOString(),
   }).eq("id", prof!.id).select(PROFILE_COLS).single();
   if (e2) fail(500, "Serverfehler (Profil)");
-  return json({ match: m, profile: p2 });
+  const { data: gs0 } = await db.from("tu_game_stats").select(STAT_COLS).eq("profile_id", prof!.id).eq("game", game).maybeSingle();
+  const next = applyResult(gs0, { won, deals: log.length, total: h, at: (m as { created_at: string }).created_at });
+  const { error: e3 } = await db.from("tu_game_stats").upsert({ profile_id: prof!.id, game, ...next }, { onConflict: "profile_id,game" });
+  if (e3) fail(500, "Serverfehler (Spielstatistik)");
+  return json({ match: m, profile: p2, stats: await statsFor(prof!.id) });
 }
 
-async function actLeaderboard() {
-  const { data, error } = await db.from("tu_profiles").select("display_name,wins,losses,matches_played,best_total")
-    .gt("matches_played", 0).order("wins", { ascending: false }).order("best_total", { ascending: false }).limit(20);
+const STAT_COLS = "game,matches_played,wins,losses,deals_played,best_total,last_played_at";
+async function statsFor(profileId: string) {
+  const { data, error } = await db.from("tu_game_stats").select(STAT_COLS).eq("profile_id", profileId);
+  if (error) fail(500, "Serverfehler (Spielstatistik)");
+  return data ?? [];
+}
+type StatRow = { profile_id: string; game: string; wins: number; losses: number; matches_played: number; best_total: number; last_played_at: string | null; tu_profiles: { display_name: string } | null };
+async function actLeaderboard(url: URL) {
+  const g = (url.searchParams.get("game") ?? "all").toLowerCase();
+  if (g !== "all" && !isKnownGame(g)) fail(400, "Unbekanntes Spiel");
+  let q = db.from("tu_game_stats").select("profile_id,game,wins,losses,matches_played,best_total,last_played_at,tu_profiles(display_name)")
+    .gt("matches_played", 0).order("wins", { ascending: false }).limit(2000);
+  if (g !== "all") q = q.eq("game", g);
+  const { data, error } = await q;
   if (error) fail(500, "Serverfehler (Rangliste)");
-  return json({ leaderboard: data });
+  const rows = ((data ?? []) as unknown as StatRow[]).map((r) => ({ ...r, display_name: r.tu_profiles?.display_name ?? "?" }));
+  const strip = (r: Record<string, unknown>) => { const { profile_id: _p, ...rest } = r; return rest; };
+  const list = g === "all" ? aggregateOverall(rows, 20) : rankGame(rows, g, 20);
+  return json({ game: g, games: GAME_IDS.map((id) => ({ id, name: GAMES[id as keyof typeof GAMES].name, results: GAMES[id as keyof typeof GAMES].results })), leaderboard: list.map(strip) });
 }
 async function actHistory(req: Request) {
   const prof = await profileByToken(bearer(req));
   if (!prof) fail(404, "Profil nicht gefunden");
-  const { data, error } = await db.from("tu_matches").select("id,human_total,computer_total,winner,deals,players,highest_bid,bids_won,bids_made,created_at")
+  const { data, error } = await db.from("tu_matches").select("id,game,human_total,computer_total,winner,deals,players,highest_bid,bids_won,bids_made,created_at")
     .eq("profile_id", prof!.id).order("created_at", { ascending: false }).limit(15);
   if (error) fail(500, "Serverfehler (Verlauf)");
-  return json({ history: data, profile: prof });
+  return json({ history: data, profile: prof, stats: await statsFor(prof!.id) });
 }
 
 Deno.serve(async (req) => {
@@ -181,9 +203,9 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     if (req.method === "GET") {
       const action = url.searchParams.get("action") ?? "health";
-      if (action === "leaderboard") return await actLeaderboard();
+      if (action === "leaderboard") return await actLeaderboard(url);
       if (action === "history") return await actHistory(req);
-      if (action === "health") return json({ ok: true, game: "tausendundeins" });
+      if (action === "health") return json({ ok: true, app: "card-master", games: GAME_IDS });
       return fail(400, "Unbekannte Aktion");
     }
     if (req.method === "POST") {
