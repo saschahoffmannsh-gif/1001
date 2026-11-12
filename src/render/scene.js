@@ -10,6 +10,12 @@ const A = (p) => BASE + 'assets/' + p;
 const W = L.boardW, D = L.boardD;
 const TILE_T = L.tileT;
 
+// Kamera je Format (Grad). Vorher: Desktop 55°/3°/30°, Hochformat 68°/0°/30°.
+export const CAM = {
+  desktop: { elev: 48, az: -2.5, fov: 42 },
+  portrait: { elev: 56, az: -1, fov: 40 },
+};
+
 export function cellToWorld(c, r) {
   const x = -L.cols / 2 + c + 0.5;
   const y = -D / 2 + L.marginBottom + r + 0.5;   // Blender-y
@@ -180,12 +186,20 @@ export class Table {
     this._camSet = true;
     const aspect = this.camera.aspect;
     const portrait = aspect < 0.8;
-    const elev = THREE.MathUtils.degToRad(portrait ? 68 : 55), az = THREE.MathUtils.degToRad(portrait ? 0 : 3);
+    // Spielkamera wie die Blender-Vorschau (tiles_7_8_blender): vom Spielerplatz leicht schräg über das Brett
+    // zur Zähleiste. Blender: Kamera (0.9, -8.6, 9.2) -> Ziel (0.7, -0.2, 0), 42 mm, Brett 2.5° gedreht.
+    const q = new URLSearchParams(location.search);
+    const C = portrait ? CAM.portrait : CAM.desktop;
+    const elev = THREE.MathUtils.degToRad(Number(q.get('elev')) || C.elev);
+    const az = THREE.MathUtils.degToRad(q.has('az') ? Number(q.get('az')) : C.az);
+    const fov = Number(q.get('fov')) || C.fov;
+    if (this.camera.fov !== fov) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); this.layoutHand(false); }
     const handTop = 1 - 2 * (this.handTopFrac ?? 0.8);          // NDC-Höhe der Handoberkante
     const hudNdc = 1 - 2 * (this.hudPx || (portrait ? 86 : 70)) / this.container.clientHeight;
     const pts = {
       top: new THREE.Vector3(0, 0.2, -(D / 2 + 1.5)),
       fl: new THREE.Vector3(-W / 2, 0, D / 2), fr: new THREE.Vector3(W / 2, 0, D / 2),
+      gl: new THREE.Vector3(-L.cols / 2, 0, D / 2 - L.marginBottom), gr: new THREE.Vector3(L.cols / 2, 0, D / 2 - L.marginBottom),
       bl: new THREE.Vector3(-W / 2 - 0.2, 0, -D / 2), br: new THREE.Vector3(W / 2 + 0.6, 0.2, -(D / 2 + 1.5)),
       tl: new THREE.Vector3(this.players > 2 ? -W / 2 - 0.2 : 0, 0.2, -(D / 2 + 1.5)),
     };
@@ -198,16 +212,28 @@ export class Table {
     const ok = () => {
       const p = {}; for (const k in pts) p[k] = pts[k].clone().project(this.camera);
       if (p.top.y > hudNdc || p.br.y > hudNdc || p.tl.y > hudNdc) return false;
-      for (const k of ['fl', 'fr', 'bl', 'br', 'tl']) if (Math.abs(p[k].x) > 0.97) return false;
-      if (!portrait && (p.fl.y < handTop - 0.07 || p.fr.y < handTop - 0.07)) return false;
-      if (portrait && p.fl.y < handTop - 0.02) return false;
+      // Raster, Zähleiste und Ablagen bleiben ganz im Bild; der vordere Brettrand darf (wie in der
+      // Blender-Vorschau) leicht unter die Hand bzw. über den Bildrand laufen.
+      for (const k of ['gl', 'gr', 'bl', 'br', 'tl']) if (Math.abs(p[k].x) > 0.97) return false;
+      for (const k of ['fl', 'fr']) if (Math.abs(p[k].x) > (portrait ? 1.04 : 0.99)) return false;
+      if (p.gl.y < handTop + 0.01 || p.gr.y < handTop + 0.01) return false;
       return true;
     };
     let best = null;
-    for (let tz = -1.5; tz <= 3.01; tz += 0.25) {
+    for (let tz = -7; tz <= 4.01; tz += 0.25) {
       for (let dist = 8; dist < 90; dist *= 1.03) { place(tz, dist); if (ok()) { if (!best || dist < best.dist) best = { tz, dist }; break; } }
     }
     if (!best) best = { tz: 0.8, dist: 30 };
+    // Brett zwischen HUD und Hand mittig setzen (im Hochformat bleibt oben sonst eine Lücke)
+    if (portrait) {
+      const dist = best.dist * 1.01; let bestOff = Infinity;
+      for (let tz = best.tz - 2; tz <= best.tz + 2; tz += 0.05) {
+        place(tz, dist); if (!ok()) continue;
+        const top = pts.top.clone().project(this.camera).y, bot = pts.gl.clone().project(this.camera).y;
+        const off = Math.abs((hudNdc - top) - (bot - handTop));
+        if (off < bestOff) { bestOff = off; best = { tz, dist }; }
+      }
+    }
     const t = place(best.tz, best.dist);
     this.controls.target.copy(t);
     this.controls.update(); this.invalidate();
