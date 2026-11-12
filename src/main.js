@@ -165,7 +165,7 @@ async function bidding() {
     renderAuction(); updateHud();
   }
   const c = st.contract;
-  setBidButtons(null, '');
+  setBidButtons(null, ''); setStatus('');
   await sleep(T(500));
   show('bidding', false);
   const forcedTxt = players === 2 ? 'Beide haben gepasst – Vorhand muss 40 spielen' : 'Alle haben gepasst – Vorhand muss 40 spielen';
@@ -176,6 +176,7 @@ function renderAuction() {
   const a = st.auction;
   // Sitzreihe: wer ist dran, wer hat gepasst, letztes Gebot je Spieler
   const last = (p) => { for (let i = a.log.length - 1; i >= 0; i--) if (a.log[i].p === p) return a.log[i]; return null; };
+  $('bid-seats').dataset.n = players;
   $('bid-seats').innerHTML = NAMES().map((n, p) => {
     const l = last(p);
     const state = a.passed[p] ? 'passed' : (a.high && a.high.p === p ? 'high' : '');

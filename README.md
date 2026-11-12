@@ -26,3 +26,11 @@ python3 tools/gen_textures.py && cp tex/tile_*.png public/assets/tex/
 blender -b -P blender/build_assets.py -- --export
 blender -b -P blender/build_assets.py -- --render --closeup --view Standard
 ```
+
+## Spielerzahl und Regeln (ab Version 2)
+
+- **2 Spieler** (du gegen 1 Computer): 24 Steine (9 bis Ass), je 8 Steine (3-2-3), Stock 8 zum Nachziehen.
+- **3 Spieler** (du gegen 2 Computer): 32 Steine mit allen 7 und 8 (je 0 Augen, Rang unter der 9). Je 10 Steine (3-4-3), 2 Steine Talon. Der Reizgewinner nimmt den Talon auf und drückt 2 Steine verdeckt; ihre Augen zählen für ihn. 10 Stiche zu je 3 Steinen, Bedien-/Stich-/Trumpfpflicht ab dem ersten Stich.
+- **4 Spieler** (du gegen 3 Computer): 32 Steine, je 8 (3-2-3), kein Stock, 8 Stiche zu je 4 Steinen.
+- **Reizen**: reihum und nacheinander, Eröffnung 40, danach nur genau +10 oder passen. Passen alle, spielt die Vorhand 40. Vorhand wandert jede Runde einen Platz weiter.
+- Computer sehen nur ihre eigene Hand, gespielte Steine, Meldungen und (als Reizgewinner) ihre eigenen gedrückten Steine.

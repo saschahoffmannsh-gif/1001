@@ -110,39 +110,44 @@ async function actProfile(req: Request, body: Record<string, unknown>) {
   return json({ profile: data, created: true });
 }
 
-type DealRow = { bidder: number; bid: number; made: boolean; delta: [number, number]; melds?: [number, number] };
+type DealRow = { bidder: number; bid: number; made: boolean; delta: number[]; melds?: number[] };
 
 async function actResult(req: Request, body: Record<string, unknown>) {
   const token = bearer(req);
   const prof = await profileByToken(token);
   if (!prof) fail(404, "Profil nicht gefunden – bitte Seite neu laden");
   await rateLimit(req, "result");
+  const players = body.players === undefined ? 2 : int(body.players, "Spielerzahl", 2, 4);
   const humanTotal = int(body.human_total, "Punkte (Du)", -5000, 5000);
   const cpuTotal = int(body.computer_total, "Punkte (Computer)", -5000, 5000);
   const winner = body.winner === "human" || body.winner === "computer" ? body.winner : fail(400, "Sieger fehlt");
   const dealsRaw = Array.isArray(body.deals) ? body.deals as DealRow[] : fail(400, "Rundenliste fehlt");
-  if (dealsRaw.length < 1 || dealsRaw.length > 200) fail(400, "Ungültige Rundenzahl");
-  // Plausibilität: Summen der Runden ergeben den Endstand, Sieger hat 1001 erreicht
-  let h = 0, c = 0, bidsWon = 0, bidsMade = 0, highest = 0, melds = 0;
+  if (dealsRaw.length < 1 || dealsRaw.length > 300) fail(400, "Ungültige Rundenzahl");
+  // Plausibilität: Summen der Runden ergeben den Endstand (je Spieler), Sieger hat 1001 erreicht
+  const tot = new Array(players).fill(0);
+  let bidsWon = 0, bidsMade = 0, highest = 0, melds = 0;
   const log = dealsRaw.map((d, i) => {
-    const bidder = int(d.bidder, `Runde ${i + 1}: Reizgewinner`, 0, 1);
+    const bidder = int(d.bidder, `Runde ${i + 1}: Reizgewinner`, 0, players - 1);
     const bid = int(d.bid, `Runde ${i + 1}: Reiz`, 40, 400);
-    const dh = int(d.delta?.[0], `Runde ${i + 1}: Punkte Du`, -400, 400);
-    const dc = int(d.delta?.[1], `Runde ${i + 1}: Punkte Computer`, -400, 400);
-    const mh = d.melds ? int(d.melds[0], "Meldung", 0, 280) : 0;
-    const mc = d.melds ? int(d.melds[1], "Meldung", 0, 280) : 0;
-    if (bid % 20 !== 0) fail(400, "Reiz muss in 20er-Schritten sein");
-    if (dh + dc > 400) fail(400, "Rundenpunkte unplausibel");
-    h += dh; c += dc; highest = Math.max(highest, bid); melds += mh;
+    if (bid % 10 !== 0) fail(400, "Reiz muss in 10er-Schritten sein");
+    if (!Array.isArray(d.delta) || d.delta.length !== players) fail(400, `Runde ${i + 1}: Punkte fehlen`);
+    const delta = d.delta.map((x, p) => int(x, `Runde ${i + 1}: Punkte Spieler ${p + 1}`, -400, 400));
+    const ml = Array.isArray(d.melds) ? d.melds.map((x) => int(x, "Meldung", 0, 280)) : new Array(players).fill(0);
+    if (ml.length !== players) fail(400, "Meldungen unplausibel");
+    if (delta.reduce((a, x) => a + Math.max(0, x), 0) > 400) fail(400, "Rundenpunkte unplausibel");
+    delta.forEach((x, p) => { tot[p] += x; });
+    highest = Math.max(highest, bid); melds += ml[0];
     if (bidder === 0) { bidsWon++; if (d.made) bidsMade++; }
-    return { bidder, bid, made: !!d.made, delta: [dh, dc], melds: [mh, mc] };
+    return { bidder, bid, made: !!d.made, delta, melds: ml };
   });
+  const h = tot[0], c = Math.max(...tot.slice(1));
   if (h !== humanTotal || c !== cpuTotal) fail(400, "Endstand passt nicht zu den Runden");
+  if (Array.isArray(body.totals) && (body.totals.length !== players || body.totals.some((x, p) => Number(x) !== tot[p]))) fail(400, "Endstand passt nicht zu den Runden");
   const winTotal = winner === "human" ? h : c;
   if (winTotal < TARGET) fail(400, "Sieger hat 1001 nicht erreicht");
   const durationS = body.duration_s === undefined ? 0 : int(body.duration_s, "Dauer", 0, 86400);
   const { data: m, error } = await db.from("tu_matches").insert({
-    profile_id: prof!.id, human_total: h, computer_total: c, winner, deals: log.length,
+    profile_id: prof!.id, human_total: h, computer_total: c, winner, deals: log.length, players, totals: tot,
     bids_won: bidsWon, bids_made: bidsMade, highest_bid: highest, melds, deal_log: log, duration_s: durationS,
   }).select("id,created_at").single();
   if (error) fail(500, "Ergebnis konnte nicht gespeichert werden");
@@ -164,7 +169,7 @@ async function actLeaderboard() {
 async function actHistory(req: Request) {
   const prof = await profileByToken(bearer(req));
   if (!prof) fail(404, "Profil nicht gefunden");
-  const { data, error } = await db.from("tu_matches").select("id,human_total,computer_total,winner,deals,highest_bid,bids_won,bids_made,created_at")
+  const { data, error } = await db.from("tu_matches").select("id,human_total,computer_total,winner,deals,players,highest_bid,bids_won,bids_made,created_at")
     .eq("profile_id", prof!.id).order("created_at", { ascending: false }).limit(15);
   if (error) fail(500, "Serverfehler (Verlauf)");
   return json({ history: data, profile: prof });
