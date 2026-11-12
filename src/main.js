@@ -283,7 +283,7 @@ async function endOfDeal() {
   if (match.winner !== null) return matchEnd();
   show('result');
   $('res-next').onclick = () => { show('result', false); startDeal(); };
-  if (params.has('autoplay')) setTimeout(() => $('res-next').click(), 300);
+  if (params.has('autoplay') && !params.has('hold')) setTimeout(() => $('res-next').click(), 300);
 }
 
 async function matchEnd() {
