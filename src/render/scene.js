@@ -64,6 +64,7 @@ export class Table {
     this.lights();
     this.tweens = [];
     this.tiles = new Map();      // card -> mesh
+    this.players = 2;
     this.hand = [];              // menschliche Hand (Karten)
     this.handGroup = new THREE.Group(); this.camera.add(this.handGroup);
     this.raycaster = new THREE.Raycaster(); this.pointer = new THREE.Vector2();
@@ -98,7 +99,7 @@ export class Table {
       t.anisotropy = this.renderer.capabilities.getMaxAnisotropy(); res(t);
     }, undefined, rej));
     const cards = [];
-    for (const s of 'DHSC') for (const r of ['9', 'J', 'Q', 'K', '10', 'A']) cards.push(s + r);
+    for (const s of 'DHSC') for (const r of ['7', '8', '9', 'J', 'Q', 'K', '10', 'A']) cards.push(s + r);
     const [board, tile, pegH, pegC, tnorm, back, ...faces] = await Promise.all([
       loadG('board.glb'), loadG('tile.glb'), loadG('peg_human.glb'), loadG('peg_computer.glb'),
       loadT('tex/tile_normal.jpg', false), loadT('tex/tile_back.png'), ...cards.map((c) => loadT(`tex/tile_${c}.png`)),
@@ -135,10 +136,10 @@ export class Table {
     this.shadowTex = this._shadowTexture();
     // Stecker
     const prep = (g) => { const o = g.scene; o.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); return o; };
-    this.pegs = [prep(pegH), prep(pegC)];
-    this.pegs[0].position.copy(scoreHoleWorld(0)).add(new THREE.Vector3(-0.36, 0, -0.3));
-    this.pegs[1].position.copy(scoreHoleWorld(0)).add(new THREE.Vector3(0.36, 0, -0.3));
-    this.scene.add(this.pegs[0], this.pegs[1]);
+    const tint = (o, col) => { const c = o.clone(true); c.traverse((m) => { if (m.isMesh) { m.material = m.material.clone(); m.material.color = new THREE.Color(col); } }); return c; };
+    const pc = prep(pegC);
+    this.pegs = [prep(pegH), pc, tint(pc, '#3d7880'), tint(pc, '#e07a3c')];   // Du rot, Computer 1 anthrazit, 2 petrol, 3 orange
+    this.pegs.forEach((g, p) => { g.position.copy(this.pegHome(p)); this.scene.add(g); g.visible = p < this.players; });
     this.resize();
     this.renderer.setAnimationLoop(() => this.frame());
   }
@@ -181,11 +182,12 @@ export class Table {
     const portrait = aspect < 0.8;
     const elev = THREE.MathUtils.degToRad(portrait ? 68 : 55), az = THREE.MathUtils.degToRad(portrait ? 0 : 3);
     const handTop = 1 - 2 * (this.handTopFrac ?? 0.8);          // NDC-Höhe der Handoberkante
-    const hudNdc = 1 - 2 * (portrait ? 86 : 70) / this.container.clientHeight;
+    const hudNdc = 1 - 2 * (this.hudPx || (portrait ? 86 : 70)) / this.container.clientHeight;
     const pts = {
       top: new THREE.Vector3(0, 0.2, -(D / 2 + 1.5)),
       fl: new THREE.Vector3(-W / 2, 0, D / 2), fr: new THREE.Vector3(W / 2, 0, D / 2),
       bl: new THREE.Vector3(-W / 2 - 0.2, 0, -D / 2), br: new THREE.Vector3(W / 2 + 0.6, 0.2, -(D / 2 + 1.5)),
+      tl: new THREE.Vector3(this.players > 2 ? -W / 2 - 0.2 : 0, 0.2, -(D / 2 + 1.5)),
     };
     const place = (tz, dist) => {
       const t = new THREE.Vector3(0.1, 0, tz);
@@ -195,8 +197,8 @@ export class Table {
     };
     const ok = () => {
       const p = {}; for (const k in pts) p[k] = pts[k].clone().project(this.camera);
-      if (p.top.y > hudNdc || p.br.y > hudNdc) return false;
-      for (const k of ['fl', 'fr', 'bl', 'br']) if (Math.abs(p[k].x) > 0.97) return false;
+      if (p.top.y > hudNdc || p.br.y > hudNdc || p.tl.y > hudNdc) return false;
+      for (const k of ['fl', 'fr', 'bl', 'br', 'tl']) if (Math.abs(p[k].x) > 0.97) return false;
       if (!portrait && (p.fl.y < handTop - 0.07 || p.fr.y < handTop - 0.07)) return false;
       if (portrait && p.fl.y < handTop - 0.02) return false;
       return true;
@@ -228,12 +230,34 @@ export class Table {
     mesh.material = faceUp ? this.faceMat[mesh.userData.card].clone() : this.backMat;
   }
 
-  // Ablageplätze
-  computerSlot(i, n) {
-    const sp = 0.98, x0 = -((n - 1) * sp) / 2 - 0.7;
-    return new THREE.Vector3(x0 + i * sp, -L.boardT, -(D / 2 + 0.95));
+  // Ablageplätze. 2 Spieler: Computer-Hand oben, Stock rechts.
+  // 3 Spieler: Computer 1 oben links, Computer 2 oben rechts, Talon (2 Steine) in der Mitte.
+  // 4 Spieler: Computer 1 links, 2 Mitte, 3 rechts – alle hinter dem Brett.
+  setPlayers(n) {
+    this.players = n;
+    if (this.pegs) this.pegs.forEach((g, p) => { g.visible = p < n; g.position.copy(this.pegHome(p)); });
+    this.resetCamera();
   }
-  stockSlot(i) { return new THREE.Vector3(W / 2 - 0.6, -L.boardT + i * (TILE_T + 0.004), -(D / 2 + 0.95)); }
+  seatLayout(seat) {
+    const n = this.players;
+    if (n === 2) return { cx: -0.7, sp: 0.98 };
+    if (n === 3) return { cx: seat === 1 ? -3.15 : 3.15, sp: 0.5 };
+    return { cx: [0, -4.05, 0, 4.05][seat], sp: 0.37 };
+  }
+  computerSlot(i, count, seat = 1) {
+    const { cx, sp } = this.seatLayout(seat);
+    const x0 = cx - ((count - 1) * sp) / 2;
+    // eng gefächert: Kacheln überlappen leicht, jede minimal höher (kein Flimmern)
+    return new THREE.Vector3(x0 + i * sp, -L.boardT + (sp < 0.9 ? i * 0.012 : 0), -(D / 2 + 0.95) - (sp < 0.9 ? i * 0.004 : 0));
+  }
+  stockSlot(i) {
+    const x = this.players === 2 ? W / 2 - 0.6 : 0;
+    return new THREE.Vector3(x, -L.boardT + i * (TILE_T + 0.004), -(D / 2 + 0.95));
+  }
+  pegHome(p) {
+    const off = [[-0.36, -0.3], [0.36, -0.3], [-0.36, 0.3], [0.36, 0.3]][p];
+    return scoreHoleWorld(0).add(new THREE.Vector3(off[0], 0, off[1]));
+  }
 
   // Hand des Menschen: im Kameraraum, immer lesbar
   layoutHand(animate = true) {
@@ -336,8 +360,9 @@ export class Table {
   async movePeg(p, total) {
     const peg = this.pegs[p];
     const tgt = scoreHoleWorld(total);
-    if (total < 50 || total >= 1001) tgt.add(new THREE.Vector3(p ? 0.36 : -0.36, 0, -0.3));
-    else tgt.add(new THREE.Vector3(p ? 0.07 : -0.07, 0, p ? 0.06 : -0.06));
+    const off = [[-0.36, -0.3], [0.36, -0.3], [-0.36, 0.3], [0.36, 0.3]][p];
+    if (total < 50 || total >= 1001) tgt.add(new THREE.Vector3(off[0], 0, off[1]));
+    else tgt.add(new THREE.Vector3(off[0] * 0.2, 0, off[1] * 0.2));
     await this.tween(peg, { pos: tgt, quat: peg.quaternion.clone(), scale: peg.scale.x, dur: 0.9, arc: 0.9 });
   }
 
