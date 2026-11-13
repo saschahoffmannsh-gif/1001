@@ -4,6 +4,7 @@ import * as AI from './game/ai.js';
 import { newBoard, openTrack, addTile } from './game/tracks.js';
 import { Table } from './render/scene.js';
 import { api } from './net.js';
+import { createSkat } from './skat/game.js';
 
 const $ = (id) => document.getElementById(id);
 const show = (id, on = true) => $(id).classList.toggle('hidden', !on);
@@ -32,7 +33,8 @@ table.load((p) => { $('loadbar').firstElementChild.style.width = Math.round(p * 
   $('btn-start').disabled = false; $('btn-start').textContent = 'Partie starten';
   $('loadbar').style.opacity = 0;
   if (params.has('hero')) heroScene();
-  if (params.has('autostart')) { screen('1001'); $('btn-start').click(); }
+  $('sk-start').disabled = false; $('sk-start').textContent = 'Serie starten';
+  if (params.has('autostart')) { if (params.get('game') === 'skat') { screen('skat'); $('sk-start').click(); } else { screen('1001'); $('btn-start').click(); } }
 }).catch((e) => { $('btn-start').textContent = 'Fehler beim Laden'; console.error(e); });
 
 $('name').value = localStorage.getItem('tu_name') || '';
@@ -44,27 +46,54 @@ markPlayers();
 $('btn-start').onclick = async () => {
   const name = $('name').value.trim() || 'Spieler';
   localStorage.setItem('tu_name', name); localStorage.setItem('tu_players', String(players));
-  show('start', false);
+  show('start', false); current = '1001';
   if (!TESTRUN) api.profile(name).then((r) => { profile = r.profile; }).catch(() => {});
   newMatch();
 };
 for (const b of document.querySelectorAll('.panel .close, .wpanel .close')) b.onclick = () => b.closest('.panel, .wpanel').classList.add('hidden');
-$('btn-rules').onclick = $('btn-rules2').onclick = $('btn-help').onclick = () => show('help');
+const showHelp = (g) => {
+  const k = g || (current === 'skat' ? 'skat' : '1001');
+  show('help-1001', k === '1001'); show('help-skat', k === 'skat');
+  $('help-title').textContent = k === 'skat' ? 'Skat – so wird gespielt' : '1001 – so wird gespielt';
+  show('help'); $('help').scrollTop = 0;
+};
+$('btn-rules').onclick = () => showHelp(current === 'skat' ? 'skat' : '1001');
+$('btn-rules2').onclick = () => showHelp('1001'); $('sk-rules').onclick = () => showHelp('skat');
+$('btn-help').onclick = () => showHelp();
+
+// ------------------------------------------------------------ Skat
+let current = null;
+const skat = createSkat({ $, show, sleep, T, setStatus: (...a) => setStatus(...a), banner: (...a) => banner(...a), toast: (...a) => toast(...a), table, params, api, TESTRUN, FAST,
+  measureHud: () => measureHud(), shuffle: (d) => R.shuffle(d), current: () => current });
+let skPlayers = Number(params.get('players')) || Number(localStorage.getItem('tu_skat_players')) || 3;
+if (![3, 4].includes(skPlayers)) skPlayers = 3;
+function markSk() { for (const b of document.querySelectorAll('#sk-pcount button')) b.classList.toggle('on', Number(b.dataset.n) === skPlayers); }
+for (const b of document.querySelectorAll('#sk-pcount button')) b.onclick = () => { skPlayers = Number(b.dataset.n); markSk(); };
+markSk();
+$('sk-start').onclick = () => {
+  const name = $('name').value.trim() || 'Spieler';
+  localStorage.setItem('tu_name', name); localStorage.setItem('tu_skat_players', String(skPlayers));
+  show('start', false); current = 'skat'; match = null; st = null;
+  for (const id of ['result', 'matchend', 'bidding', 'meld', 'discard']) show(id, false);
+  if (!TESTRUN) api.profile(name).then((r) => { profile = r.profile; }).catch(() => {});
+  skat.start(skPlayers);
+};
+$('sk-back').onclick = () => screen('home');
 
 // ------------------------------------------------------------ Card Master: Spielauswahl
-function screen(id) { show('scr-home', id === 'home'); show('scr-1001', id === '1001'); }
+function screen(id) { show('scr-home', id === 'home'); show('scr-1001', id === '1001'); show('scr-skat', id === 'skat'); }
 for (const g of document.querySelectorAll('#games .game')) g.onclick = () => {
   if (g.classList.contains('soon')) { toast(`${g.getAttribute('aria-label').split(' –')[0]} kommt später – bald verfügbar.`); return; }
-  localStorage.setItem('tu_name', $('name').value.trim()); screen('1001');
+  localStorage.setItem('tu_name', $('name').value.trim()); screen(g.dataset.game === 'skat' ? 'skat' : '1001');
 };
 $('btn-back').onclick = () => screen('home');
-if (params.get('screen') === '1001') screen('1001');
+if (['1001', 'skat'].includes(params.get('screen'))) screen(params.get('screen'));
 $('btn-profile').onclick = openProfile;
 
 $('btn-menu').onclick = () => show('menu');
 $('m-resume').onclick = () => show('menu', false);
 $('m-cam').onclick = () => { table.resetCamera(); show('menu', false); };
-$('m-new').onclick = () => { show('menu', false); if (confirm('Aktuelle Partie abbrechen und zur Spielauswahl zurück?')) { st = null; for (const id of ['result', 'matchend', 'bidding', 'meld', 'discard', 'hud', 'status']) show(id, false); table.clearBoard(); screen('home'); show('start'); } };
+$('m-new').onclick = () => { show('menu', false); if (confirm('Aktuelle Partie abbrechen und zur Spielauswahl zurück?')) { st = null; match = null; skat.abort(); current = null; for (const id of ['result', 'matchend', 'bidding', 'meld', 'discard', 'hud', 'status']) show(id, false); table.clearBoard(); screen('home'); show('start'); } };
 $('btn-board').onclick = $('m-board').onclick = $('me-board').onclick = openLeaderboard;
 $('btn-newtrack').onclick = () => { forceNewTrack = !forceNewTrack; $('btn-newtrack').classList.toggle('on', forceNewTrack); };
 
@@ -76,7 +105,9 @@ async function banner(html, ms = 1500) { $('banner').innerHTML = html; show('ban
 
 // ------------------------------------------------------------ HUD (Holzleiste)
 function buildHud() {
-  $('hud').dataset.n = players;
+  $('hud').dataset.n = players; $('hud').dataset.game = '1001';
+  document.querySelector('#hud .stat .k').textContent = 'Reiz';
+  document.querySelector('#hud .stat.trump .k').textContent = 'Trumpf';
   $('hud-players').innerHTML = NAMES().map((n, p) => `
     <div class="pl" id="pl-${p}"><i class="peg p${p}"></i>
       <span class="nm"><span class="full">${n}</span><span class="short">${SHORT[n]}</span></span>
@@ -109,13 +140,13 @@ function measureHud() {
 table.onHandLayout = (topFrac) => {
   document.documentElement.style.setProperty('--hand-h', Math.round(innerHeight * (1 - topFrac)) + 'px');
 };
-window.addEventListener('resize', () => { if (match) { updateHud(); measureHud(); } });
+window.addEventListener('resize', () => { if (match && current === '1001') { updateHud(); measureHud(); } });
 
 // ------------------------------------------------------------ Partie / Runde
 function newMatch() {
   match = R.newMatch(players); matchStart = Date.now(); saving = false;
   for (const id of ['result', 'matchend', 'bidding', 'meld', 'discard']) show(id, false);
-  table.setPlayers(players);
+  table.setPlayers(players); table.showPegs(true);
   buildHud(); show('hud'); measureHud();
   for (let p = 0; p < players; p++) table.movePeg(p, 0);
   startDeal();
@@ -414,7 +445,7 @@ async function matchEnd() {
 }
 
 const GAME_INFO = { '1001': { name: '1001', img: 'game_1001' }, romme: { name: 'Rommé', img: 'game_romme', soon: true },
-  skat: { name: 'Skat', img: 'game_skat', soon: true }, bridge: { name: 'Bridge', img: 'game_bridge', soon: true } };
+  skat: { name: 'Skat', img: 'game_skat' }, bridge: { name: 'Bridge', img: 'game_bridge', soon: true } };
 let lbGame = 'all';
 for (const t of document.querySelectorAll('#lb-tabs button')) t.onclick = () => { if (!t.disabled) { lbGame = t.dataset.game; loadBoard(); } };
 async function openLeaderboard() {
@@ -431,7 +462,8 @@ async function loadBoard() {
   }
   $('lb-note').textContent = lbGame === 'all'
     ? 'Gesamtwertung über alle Spiele: Siege zählen. Bei Gleichstand: weniger Niederlagen, dann wer zuletzt gespielt hat.'
-    : `Wertung ${GAME_INFO[lbGame].name}: Siege, bei Gleichstand die beste Punktzahl.`;
+    : lbGame === 'skat' ? 'Wertung Skat: Siege (gewonnene Spiele als Alleinspieler, verlorene Spiele des Gegners), bei Gleichstand die Turnierpunkte.'
+      : `Wertung ${GAME_INFO[lbGame].name}: Siege, bei Gleichstand die beste Punktzahl.`;
   $('lb-body').innerHTML = '<p class="engr-s">Lade …</p>';
   const want = lbGame;
   try {
@@ -440,7 +472,7 @@ async function loadBoard() {
     const me = (localStorage.getItem('tu_name') || '').trim();
     const head = want === 'all'
       ? '<tr><th></th><th>Name</th><th class="n">Siege</th><th class="n">Niederl.</th><th class="n">Partien</th></tr>'
-      : '<tr><th></th><th>Name</th><th class="n">Siege</th><th class="n">Niederl.</th><th class="n">Bestwert</th></tr>';
+      : `<tr><th></th><th>Name</th><th class="n">Siege</th><th class="n">Niederl.</th><th class="n">${want === 'skat' ? 'Punkte' : 'Bestwert'}</th></tr>`;
     $('lb-body').innerHTML = leaderboard.length ? `<table class="lb">${head}${leaderboard.map((r) => `<tr class="${me && r.display_name === me ? 'me' : ''}"><td class="rk">${r.rank}.</td><td>${esc(r.display_name)}</td><td class="n"><b>${r.wins}</b></td><td class="n">${r.losses}</td><td class="n">${want === 'all' ? r.matches_played : r.best_total}</td></tr>`).join('')}</table>` : '<p class="engr-s">Noch keine Partien gespeichert – gewinne die erste!</p>';
   } catch (e) { $('lb-body').innerHTML = `<p class="engr-s">${esc(e.message)}</p>`; }
 }
@@ -456,7 +488,9 @@ async function openProfile() {
   $('pf-wins').textContent = sum('wins'); $('pf-losses').textContent = sum('losses'); $('pf-matches').textContent = sum('matches_played');
   $('pf-games').innerHTML = Object.entries(GAME_INFO).map(([id, g]) => {
     const x = stats.find((s) => s.game === id);
-    const line = g.soon ? 'Bald verfügbar' : x ? `${x.wins} Siege · ${x.losses} Niederlagen · ${x.matches_played} Partien · Bestwert ${x.best_total}` : 'Noch keine Partie';
+    const line = g.soon ? 'Bald verfügbar' : !x ? 'Noch keine Partie'
+      : id === 'skat' ? `${x.wins} Siege · ${x.losses} Niederlagen · ${x.matches_played} Serien · ${x.best_total} Turnierpunkte`
+      : `${x.wins} Siege · ${x.losses} Niederlagen · ${x.matches_played} Partien · Bestwert ${x.best_total}`;
     return `<div class="pf-game${g.soon ? ' soon' : ''}"><img src="${import.meta.env.BASE_URL}assets/ui/${g.img}.webp" alt=""><div><b>${esc(g.name)}</b><div class="st">${line}</div></div></div>`;
   }).join('');
 }

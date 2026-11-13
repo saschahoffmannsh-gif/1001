@@ -264,6 +264,7 @@ export class Table {
     if (this.pegs) this.pegs.forEach((g, p) => { g.visible = p < n; g.position.copy(this.pegHome(p)); });
     this.resetCamera();
   }
+  showPegs(on) { if (this.pegs) this.pegs.forEach((g, p) => { g.visible = on && p < this.players; }); this.invalidate && this.invalidate(); }
   seatLayout(seat) {
     const n = this.players;
     if (n === 2) return { cx: -0.7, sp: 0.98 };

@@ -147,7 +147,7 @@ SPEC = [
 for fn, title in (('game_romme', 'Rommé'), ('game_skat', 'Skat'), ('game_bridge', 'Bridge')):
     SPEC.append({'name': fn, 'w': 3.4, 'h': 2.7, 'items': [
         {'kind': 'text', 'text': title, 'size': 0.56, 'y': -0.5, 'weight': 'ExtraBold', 'spacing': 0.0},
-        {'kind': 'text', 'text': 'BALD VERFÜGBAR', 'size': 0.19, 'y': -0.98, 'weight': 'Bold', 'spacing': 0.03}]})
+        {'kind': 'text', 'text': '3 – 4 SPIELER' if fn == 'game_skat' else 'BALD VERFÜGBAR', 'size': 0.19, 'y': -0.98, 'weight': 'Bold', 'spacing': 0.03}]})
 make_masks(SPEC)
 
 # ---------------------------------------------------------------- Tafel (9-Slice für Menüs)

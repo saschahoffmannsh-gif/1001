@@ -342,3 +342,35 @@ body:has(#help:not(.hidden)) .shell-in { visibility: hidden; }
 #res-table th { color: var(--engrave-l); font-size: 12px; letter-spacing: .06em; }
 #help .help-body p { font-size: 14px; }
 .wpanel .col-btns .wbtn, #result .wbtn { min-height: 64px; font-size: 17px; }
+
+/* ---------------------------------------------------------------- Skat */
+.pcount.two { grid-template-columns: repeat(2, 1fr); }
+.mini-tile.s-J { background: linear-gradient(180deg, #c99a3a, #9c7224); }
+.mini-tile.s-N { background: #fffaf2; color: #5a4129; box-shadow: inset 0 0 0 1px rgba(120, 82, 44, .45); }
+#i-trump .tname { margin-left: 5px; }
+#i-trump .kre { margin-left: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--red); }
+.pl.sitout { opacity: .55; filter: saturate(.4); }
+.pl.sitout .tot { opacity: .8; }
+.pl.decl { box-shadow: inset 0 0 0 2px rgba(198, 63, 55, .55); }
+.pl.decl .nm::after { content: ' · Allein'; color: var(--red); font-weight: 800; }
+.pl.decl.turn { box-shadow: inset 0 0 0 2px rgba(198, 63, 55, .6), 0 0 12px rgba(255, 214, 140, .55); }
+.seat .sv.flash { animation: svflash .6s ease-out; }
+@keyframes svflash { from { transform: scale(1.35); color: var(--red); } to { transform: scale(1); } }
+.ska-games { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 6px 0 8px; }
+.ska-games .wbtn { flex-direction: column; min-height: 78px; gap: 2px; padding: 2px; }
+.ska-games .wbtn .mini-tile { width: 26px; height: 28px; font-size: 16px; }
+.ska-games .wbtn b { font-size: 15px; }
+.ska-games .wbtn i { font-style: normal; font-size: 11px; font-weight: 700; opacity: .75; }
+.ska-games .wbtn:disabled { filter: saturate(.2) brightness(.9); opacity: .6; }
+.ska-opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 6px; }
+.ska-opts .wbtn { min-height: 46px; font-size: 12.5px; padding: 2px 4px; line-height: 1.15; }
+.ska-opts .wbtn:disabled { opacity: .45; filter: saturate(.3); }
+.ska-value { text-align: center; font-size: 14px; font-weight: 700; color: var(--engrave); margin: 4px 0 8px; min-height: 2.6em; text-shadow: 0 1px 0 rgba(255, 250, 240, .7); }
+.ska-value .warn, #res-table .warn { color: var(--red); }
+#sk-announce .engr-s { text-align: center; }
+#res-table td.calc { text-align: left; font-size: 12px; font-weight: 600; }
+@media (max-width: 560px) {
+  .ska-games .wbtn { min-height: 64px; }
+  .ska-opts .wbtn { font-size: 11px; min-height: 42px; }
+  #sk-announce { padding: 12px 10px; }
+}
