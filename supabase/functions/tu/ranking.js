@@ -60,3 +60,12 @@ export function applyResult(stat, { won, deals, total, at }) {
     deals_played: s.deals_played + (deals | 0), best_total: Math.max(s.best_total | 0, total | 0), last_played_at: at,
   };
 }
+
+// Skat: Zähler nach einer Serie (Siege/Niederlagen je Spiel der Serie; best_total = aufsummierte Turnierpunkte)
+export function applySkatResult(stat, { wins, losses, deals, points, at }) {
+  const s = stat || { matches_played: 0, wins: 0, losses: 0, deals_played: 0, best_total: 0, last_played_at: null };
+  return {
+    matches_played: s.matches_played + 1, wins: s.wins + (wins | 0), losses: s.losses + (losses | 0),
+    deals_played: s.deals_played + (deals | 0), best_total: (s.best_total | 0) + (points | 0), last_played_at: at,
+  };
+}

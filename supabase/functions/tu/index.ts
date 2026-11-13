@@ -2,7 +2,8 @@
 // Service-Role bleibt auf dem Server (env), nie im Spiel-Client.
 // Spiel gegen den Computer läuft komplett im Client; hier: Profil, Ergebnisse, Rangliste, Verlauf.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { GAMES, GAME_IDS, normGame, isKnownGame, acceptsResults, aggregateOverall, rankGame, applyResult } from "./ranking.js";
+import { GAMES, GAME_IDS, normGame, isKnownGame, acceptsResults, aggregateOverall, rankGame, applyResult, applySkatResult } from "./ranking.js";
+import * as Skat from "./skat.js";
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -121,6 +122,7 @@ async function actResult(req: Request, body: Record<string, unknown>) {
   const game = normGame(body.game);
   if (!isKnownGame(game)) fail(400, "Unbekanntes Spiel");
   if (!acceptsResults(game)) fail(400, `${GAMES[game as keyof typeof GAMES].name} kann noch nicht gewertet werden – bald verfügbar`);
+  if (game === "skat") return await actResultSkat(prof!, body);
   const players = body.players === undefined ? 2 : int(body.players, "Spielerzahl", 2, 4);
   const humanTotal = int(body.human_total, "Punkte (Du)", -5000, 5000);
   const cpuTotal = int(body.computer_total, "Punkte (Computer)", -5000, 5000);
@@ -168,6 +170,43 @@ async function actResult(req: Request, body: Record<string, unknown>) {
   return json({ match: m, profile: p2, stats: await statsFor(prof!.id) });
 }
 
+
+// Skat: Die komplette Serie (Blatt, Reizen, Skat, Ansage, Kontra, alle Steine) wird mit denselben Regeln nachgespielt.
+// Turnierpunkte, Siege und Niederlagen rechnet der Server selbst; die Angaben des Clients müssen exakt passen.
+type Prof = { id: string; matches_played: number; wins: number; losses: number; deals_played: number; best_total: number };
+async function actResultSkat(prof: Prof, body: Record<string, unknown>) {
+  const players = int(body.players, "Spielerzahl", 3, 4);
+  if (!Array.isArray(body.deals)) fail(400, "Spielliste fehlt");
+  let m: { totals: number[]; wins: number[]; losses: number[]; deals: { result: Record<string, unknown> }[] };
+  try { m = Skat.verifyMatch(players, body.deals as unknown[]) as typeof m; }
+  catch (e) { return fail(400, `Skat-Serie nicht plausibel – ${e instanceof Error ? e.message : "Fehler"}`); }
+  const totals = Array.isArray(body.totals) ? body.totals : fail(400, "Endstand fehlt");
+  if (totals.length !== players || totals.some((x, p) => Number(x) !== m!.totals[p])) fail(400, "Endstand passt nicht zu den Spielen");
+  if (body.wins !== undefined && int(body.wins, "Siege", 0, 12) !== m!.wins[0]) fail(400, "Siege passen nicht zu den Spielen");
+  if (body.losses !== undefined && int(body.losses, "Niederlagen", 0, 12) !== m!.losses[0]) fail(400, "Niederlagen passen nicht zu den Spielen");
+  const h = m!.totals[0], c = Math.max(...m!.totals.slice(1));
+  const winner = h > c ? "human" : "computer";
+  if (body.winner !== undefined && body.winner !== winner) fail(400, "Sieger passt nicht zu den Spielen");
+  const res = m!.deals.map((d) => d.result as { declarer?: number; won?: boolean; bid?: number; type: string });
+  const mine = res.filter((r) => r.type !== "ramsch" && r.declarer === 0);
+  const durationS = body.duration_s === undefined ? 0 : int(body.duration_s, "Dauer", 0, 86400);
+  const { data: mt, error } = await db.from("tu_matches").insert({
+    profile_id: prof.id, game: "skat", human_total: h, computer_total: c, winner, deals: res.length, players, totals: m!.totals,
+    bids_won: mine.length, bids_made: mine.filter((r) => r.won).length, highest_bid: Math.max(0, ...res.map((r) => r.bid ?? 0)), melds: 0,
+    deal_log: body.deals, duration_s: durationS,
+  }).select("id,created_at").single();
+  if (error) fail(500, "Ergebnis konnte nicht gespeichert werden");
+  const { data: p2, error: e2 } = await db.from("tu_profiles").update({
+    matches_played: prof.matches_played + 1, wins: prof.wins + m!.wins[0], losses: prof.losses + m!.losses[0],
+    deals_played: prof.deals_played + res.length, updated_at: new Date().toISOString(),
+  }).eq("id", prof.id).select(PROFILE_COLS).single();
+  if (e2) fail(500, "Serverfehler (Profil)");
+  const { data: gs0 } = await db.from("tu_game_stats").select(STAT_COLS).eq("profile_id", prof.id).eq("game", "skat").maybeSingle();
+  const next = applySkatResult(gs0, { wins: m!.wins[0], losses: m!.losses[0], deals: res.length, points: h, at: (mt as { created_at: string }).created_at });
+  const { error: e3 } = await db.from("tu_game_stats").upsert({ profile_id: prof.id, game: "skat", ...next }, { onConflict: "profile_id,game" });
+  if (e3) fail(500, "Serverfehler (Spielstatistik)");
+  return json({ match: mt, profile: p2, stats: await statsFor(prof.id), skat: { totals: m!.totals, wins: m!.wins[0], losses: m!.losses[0] } });
+}
 const STAT_COLS = "game,matches_played,wins,losses,deals_played,best_total,last_played_at";
 async function statsFor(profileId: string) {
   const { data, error } = await db.from("tu_game_stats").select(STAT_COLS).eq("profile_id", profileId);
