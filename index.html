@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#efe5d8" />
+<title>Card Master – Brettspiel-Sammlung</title>
+<meta name="description" content="Card Master – Kartenspiele als Brettspiel. Zuerst 1001 (Tausendundeins): Steine statt Karten, Spuren auf dem Raster, Reizrunde und Hochzeiten – gegen den Computer." />
+<link rel="icon" type="image/png" href="/1001/assets/tex/tile_HA.png" />
+  <script type="module" crossorigin src="/1001/assets/index-Bo4mSg2w.js"></script>
+  <link rel="stylesheet" crossorigin href="/1001/assets/index-CRbVJ0bl.css">
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+
+  <header id="hud" class="hidden">
+    <div class="plank">
+      <div id="hud-players" class="players"></div>
+      <div class="stats">
+        <div class="stat"><span class="k">Reiz</span><b id="i-bid">–</b></div>
+        <div class="stat trump"><span class="k">Trumpf</span><b id="i-trump">–</b></div>
+        <div class="stat"><span class="k">Stich</span><b id="i-trick">0/12</b></div>
+        <div class="stat" id="stat-stock"><span class="k">Stock</span><b id="i-stock">8</b></div>
+        <div class="top-btns">
+          <button id="btn-help" class="knob" title="Regeln" aria-label="Regeln">?</button>
+          <button id="btn-menu" class="knob" title="Menü" aria-label="Menü">☰</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div id="status" class="hidden"><span id="status-txt"></span></div>
+  <div id="actions" class="hidden">
+    <button id="btn-newtrack" class="chip">Neue Spur aufmachen</button>
+  </div>
+  <div id="banner" class="hidden"></div>
+
+  <!-- Card Master: Startbildschirm mit Spielauswahl -->
+  <section id="start" class="shell">
+    <div class="shell-in">
+      <h1 class="cm-logo"><img src="/1001/assets/ui/logo.webp" alt="Card Master" width="1504" height="445" /></h1>
+
+      <div id="scr-home" class="scr">
+        <label class="nameslot wbtn ivory" for="name"><span class="engr">Spielername</span><input id="name" maxlength="20" placeholder="Spieler" autocomplete="nickname" /></label>
+        <div class="lbl engr-l">Spiel wählen</div>
+        <div id="games" class="games">
+          <button class="game" data-game="1001" aria-label="1001 spielen – 2 bis 4 Spieler"><img src="/1001/assets/ui/game_1001.webp" alt="" width="706" height="554" /></button>
+          <button class="game soon" data-game="romme" aria-disabled="true" aria-label="Rommé – bald verfügbar"><img src="/1001/assets/ui/game_romme.webp" alt="" width="706" height="554" /></button>
+          <button class="game" data-game="skat" aria-label="Skat spielen – 3 oder 4 Spieler"><img src="/1001/assets/ui/game_skat.webp" alt="" width="706" height="554" /></button>
+          <button class="game soon" data-game="bridge" aria-disabled="true" aria-label="Bridge – bald verfügbar"><img src="/1001/assets/ui/game_bridge.webp" alt="" width="706" height="554" /></button>
+        </div>
+        <div class="shell-btns">
+          <button id="btn-profile" class="wbtn wood">Profil</button>
+          <button id="btn-board" class="wbtn wood">Rangliste</button>
+          <button id="btn-rules" class="wbtn wood">Regeln</button>
+        </div>
+      </div>
+
+      <div id="scr-1001" class="scr hidden">
+        <div class="wpanel setup">
+          <h2 class="engr">1001 <small>Tausendundeins</small></h2>
+          <p class="engr-s">Steine legen, Spuren bauen, Hochzeiten melden.</p>
+          <div class="lbl engr-l">Mitspieler</div>
+          <div id="pcount" class="pcount">
+            <button data-n="2" class="wbtn ivory"><span class="pegs"><img src="/1001/assets/ui/peg0.webp" alt=""><img src="/1001/assets/ui/peg1.webp" alt=""></span><b>2 Spieler</b><span>1 Computer<br>24 Steine</span></button>
+            <button data-n="3" class="wbtn ivory"><span class="pegs"><img src="/1001/assets/ui/peg0.webp" alt=""><img src="/1001/assets/ui/peg1.webp" alt=""><img src="/1001/assets/ui/peg2.webp" alt=""></span><b>3 Spieler</b><span>2 Computer<br>32 Steine</span></button>
+            <button data-n="4" class="wbtn ivory"><span class="pegs"><img src="/1001/assets/ui/peg0.webp" alt=""><img src="/1001/assets/ui/peg1.webp" alt=""><img src="/1001/assets/ui/peg2.webp" alt=""><img src="/1001/assets/ui/peg3.webp" alt=""></span><b>4 Spieler</b><span>3 Computer<br>32 Steine</span></button>
+          </div>
+          <button id="btn-start" class="wbtn red big" disabled>Lade Brett …</button>
+          <div class="shell-btns two"><button id="btn-back" class="wbtn wood">Zurück</button><button id="btn-rules2" class="wbtn wood">Regeln</button></div>
+          <div id="loadbar"><i></i></div>
+        </div>
+      </div>
+
+      <div id="scr-skat" class="scr hidden">
+        <div class="wpanel setup">
+          <h2 class="engr">Skat <small>nach Internationaler Skatordnung</small></h2>
+          <p class="engr-s">Reizen, Skat drücken, Farbspiel, Grand oder Null – eine Serie über 12 Spiele.</p>
+          <div class="lbl engr-l">Mitspieler</div>
+          <div id="sk-pcount" class="pcount two">
+            <button data-n="3" class="wbtn ivory"><span class="pegs"><img src="/1001/assets/ui/peg0.webp" alt=""><img src="/1001/assets/ui/peg1.webp" alt=""><img src="/1001/assets/ui/peg2.webp" alt=""></span><b>3 Spieler</b><span>2 Computer<br>jeder spielt jedes Spiel</span></button>
+            <button data-n="4" class="wbtn ivory"><span class="pegs"><img src="/1001/assets/ui/peg0.webp" alt=""><img src="/1001/assets/ui/peg1.webp" alt=""><img src="/1001/assets/ui/peg2.webp" alt=""><img src="/1001/assets/ui/peg3.webp" alt=""></span><b>4 Spieler</b><span>3 Computer<br>der Geber setzt aus</span></button>
+          </div>
+          <button id="sk-start" class="wbtn red big" disabled>Lade Brett …</button>
+          <div class="shell-btns two"><button id="sk-back" class="wbtn wood">Zurück</button><button id="sk-rules" class="wbtn wood">Regeln</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Reizrunde -->
+  <section id="bidding" class="plaque dock hidden">
+    <div class="plaque-head"><h2>Reizrunde</h2><span class="rule">immer +10 · ab 40</span></div>
+    <div id="bid-seats" class="seats"></div>
+    <div class="bid-mid">
+      <div id="bid-high" class="bid-high"></div>
+      <div id="bid-log" class="bid-log"></div>
+    </div>
+    <div class="bid-btns">
+      <button id="bid-up" class="tile-btn red" disabled>Reizen: <b>40</b></button>
+      <button id="bid-pass" class="tile-btn ivory" disabled>Passen</button>
+    </div>
+  </section>
+
+  <!-- 3 Spieler: Drücken -->
+  <section id="discard" class="plaque dock small hidden">
+    <div class="plaque-head"><h2>Talon aufgenommen</h2><span class="rule">2 Steine drücken</span></div>
+    <p class="hint">Tippe zwei Steine an, die du verdeckt ablegst. Ihre Augen zählen für dich.</p>
+    <div class="bid-btns"><span id="disc-count" class="disc-count">0 von 2 gewählt</span><button id="disc-ok" class="tile-btn red" disabled>Drücken</button></div>
+  </section>
+
+
+  <!-- Skat: Reizen -->
+  <section id="sk-bid" class="plaque dock hidden">
+    <div class="plaque-head"><h2>Reizen</h2><span class="rule">18 · 20 · 22 · 23 · 24 · 27 …</span></div>
+    <div id="skb-seats" class="seats"></div>
+    <div class="bid-mid">
+      <div id="skb-high" class="bid-high"></div>
+      <div id="skb-log" class="bid-log"></div>
+    </div>
+    <div class="bid-btns">
+      <button id="skb-yes" class="tile-btn red" disabled>…</button>
+      <button id="skb-pass" class="tile-btn ivory" disabled>Weg</button>
+    </div>
+  </section>
+
+  <!-- Skat: Skat/Hand, Drücken, Kontra/Re -->
+  <section id="sk-choice" class="plaque dock small hidden">
+    <div class="plaque-head"><h2 id="skc-title"></h2><span class="rule" id="skc-rule"></span></div>
+    <p class="hint" id="skc-text"></p>
+    <div class="bid-btns"><button id="skc-a" class="tile-btn red"></button><button id="skc-b" class="tile-btn ivory"></button></div>
+  </section>
+
+  <!-- Skat: Spiel ansagen -->
+  <section id="sk-announce" class="wpanel center hidden">
+    <h2 class="engr">Spiel ansagen</h2>
+    <p id="ska-info" class="engr-s"></p>
+    <div id="ska-games" class="ska-games">
+      <button data-g="D" class="wbtn ivory"><span class="mini-tile s-D">♦</span><b>Karo</b><i>9</i></button>
+      <button data-g="H" class="wbtn ivory"><span class="mini-tile s-H">♥</span><b>Herz</b><i>10</i></button>
+      <button data-g="S" class="wbtn ivory"><span class="mini-tile s-S">♠</span><b>Pik</b><i>11</i></button>
+      <button data-g="C" class="wbtn ivory"><span class="mini-tile s-C">♣</span><b>Kreuz</b><i>12</i></button>
+      <button data-g="grand" class="wbtn ivory"><span class="mini-tile s-J">B</span><b>Grand</b><i>24</i></button>
+      <button data-g="null" class="wbtn ivory"><span class="mini-tile s-N">0</span><b>Null</b><i>23</i></button>
+    </div>
+    <div class="ska-opts">
+      <button id="ska-o-schneider" class="wbtn wood">Schneider angesagt</button>
+      <button id="ska-o-schwarz" class="wbtn wood">Schwarz angesagt</button>
+      <button id="ska-o-ouvert" class="wbtn wood">Ouvert (offen)</button>
+    </div>
+    <p id="ska-value" class="ska-value"></p>
+    <button id="ska-ok" class="wbtn red big">Ansagen</button>
+  </section>
+
+  <!-- Meldung -->
+  <section id="meld" class="wpanel center small hidden">
+    <h2 id="meld-title" class="engr">Hochzeit melden?</h2>
+    <p id="meld-text"></p>
+    <div class="col-btns">
+      <button id="meld-yes" class="wbtn red">Melden &amp; ausspielen</button>
+      <button id="meld-no" class="wbtn ivory">Ohne Meldung ausspielen</button>
+      <button id="meld-cancel" class="wbtn wood">Abbrechen</button>
+    </div>
+  </section>
+
+  <!-- Rundenergebnis -->
+  <section id="result" class="wpanel center hidden">
+    <h2 id="res-title" class="engr">Rundenende</h2>
+    <table id="res-table"></table>
+    <p id="res-note"></p>
+    <button id="res-next" class="wbtn red">Nächste Runde</button>
+  </section>
+
+  <!-- Partieende -->
+  <section id="matchend" class="wpanel center hidden">
+    <h2 id="me-title" class="engr"></h2>
+    <p id="me-text"></p>
+    <p id="me-save" class="muted"></p>
+    <div class="col-btns"><button id="me-new" class="wbtn red">Neue Partie</button><button id="me-board" class="wbtn wood">Rangliste</button></div>
+  </section>
+
+  <section id="help" class="wpanel center scroll hidden">
+    <h2 class="engr" id="help-title">1001 – so wird gespielt</h2>
+    <div class="help-body" id="help-1001">
+      <p><b>Steine:</b> Vier Farben – Karo ♦, Herz ♥, Pik ♠, Kreuz ♣. <b>2 Spieler:</b> 24 Steine (Ass, Zehn, König, Dame, Bube, Neun). <b>Ab 3 Spielern:</b> 32 Steine – zusätzlich alle Achten und Siebenen. Vor jeder Runde wird komplett neu gemischt.</p>
+      <p><b>Werte:</b> Ass 11 · Zehn 10 · König 4 · Dame 3 · Bube 2 · Neun, Acht, Sieben je 0 – zusammen immer 120. <b>Rangfolge:</b> Ass &gt; Zehn &gt; König &gt; Dame &gt; Bube &gt; Neun &gt; Acht &gt; Sieben.</p>
+      <p><b>Geben (2 Spieler):</b> Jeder bekommt 8 Steine (3-2-3), 8 liegen verdeckt als Stock zum Nachziehen.</p>
+      <p><b>Geben (3 Spieler):</b> Jeder bekommt 10 Steine (3-4-3), 2 Steine liegen verdeckt als Talon. Der Reizgewinner nimmt den Talon auf und drückt danach 2 beliebige Steine verdeckt – deren Augen zählen für ihn. Es gibt 10 Stiche zu je 3 Steinen.</p>
+      <p><b>Geben (4 Spieler):</b> Jeder bekommt 8 Steine (3-2-3), kein Stock. 8 Stiche zu je 4 Steinen.</p>
+      <p><b>Reizrunde:</b> Die Vorhand beginnt, die Vorhand wandert jede Runde einen Platz weiter. Gereizt wird reihum und nacheinander: Eröffnung 40, danach darf jeder nur um genau 10 erhöhen (40, 50, 60, 70 …) oder passen. Wer gepasst hat, ist raus. Haben alle anderen gepasst, gewinnt das höchste Gebot. Passen alle, muss die Vorhand 40 spielen. Der Reizgewinner spielt den ersten Stich aus und muss mindestens sein Gebot erreichen (Augen + Meldungen) – sonst wird das Gebot abgezogen. Alle anderen schreiben ihre eigenen Punkte.</p>
+      <p><b>Stich:</b> Die höchste Karte der ausgespielten Farbe gewinnt, Trumpf sticht. Am Anfang gibt es keinen Trumpf. Wer den Stich gewinnt, spielt aus und darf eine eigene Spur auf dem Raster aufmachen – die Steine bleiben sichtbar liegen.</p>
+      <p><b>Stock (2 Spieler):</b> Nach jedem der ersten vier Stiche ziehen beide nach (Gewinner zuerst). Solange der Stock da ist, darf jeder Stein gelegt werden. Danach gilt: Farbe bedienen, wenn möglich überstechen, sonst trumpfen. <b>Ab 3 Spielern</b> gilt diese Pflicht vom ersten Stich an.</p>
+      <p><b>Hochzeit:</b> Wer ausspielt und König + Dame einer Farbe hat, kann beim Ausspielen melden: Karo 40, Herz 60, Pik 80, Kreuz 100. Diese Farbe wird Trumpf. Jede Farbe nur einmal. Meldungen zählen nur, wenn man in der Runde mindestens einen Stich macht.</p>
+      <p><b>Ziel:</b> Wer zuerst 1001 Punkte hat, gewinnt die Partie.</p>
+      <p class="muted">Steuerung: Stein antippen zum Legen. Brett mit Wischen drehen, mit zwei Fingern / Mausrad zoomen.</p>
+    </div>
+    <div class="help-body hidden" id="help-skat">
+      <p><b>Grundlage:</b> Skat nach der Internationalen Skatordnung (ISkO). 32 Steine: Kreuz ♣, Pik ♠, Herz ♥, Karo ♦, je Ass bis Sieben. Gespielt wird zu dritt; <b>zu viert</b> setzt der Geber in jedem Spiel aus, das Geben wandert reihum. Vor jedem Spiel wird neu gemischt.</p>
+      <p><b>Geben:</b> 3 – Skat (2) – 4 – 3. Jeder hat 10 Steine, 2 liegen verdeckt als Skat. Links vom Geber sitzt <b>Vorhand</b>, dann <b>Mittelhand</b>, dann <b>Hinterhand</b>.</p>
+      <p><b>Reizen:</b> Mittelhand sagt Vorhand Reizwerte (18, 20, 22, 23, 24, 27, 30 …), Vorhand antwortet „ja“ oder „weg“. Dann sagt Hinterhand dem Verbliebenen. Wer übrig bleibt, wird <b>Alleinspieler</b> zum letzten Reizwert. Sagen Mittel- und Hinterhand nichts, darf Vorhand 18 sagen. Passen alle, wird <b>Ramsch</b> gespielt.</p>
+      <p><b>Skat oder Hand:</b> Der Alleinspieler nimmt den Skat auf und drückt 2 beliebige Steine verdeckt (ihre Augen zählen für ihn) – oder spielt <b>Hand</b>, dann bleibt der Skat liegen (zählt trotzdem für ihn). Danach sagt er das Spiel an.</p>
+      <p><b>Farbspiele und Grand:</b> Die vier Buben sind immer die höchsten Trümpfe: Kreuz-Bube, Pik-Bube, Herz-Bube, Karo-Bube. Im Farbspiel folgen die Trumpffarbe A, 10, K, D, 9, 8, 7, im Grand sind nur die Buben Trumpf. In jeder Farbe gilt A, 10, K, D, 9, 8, 7. Buben gehören zum Trumpf, nicht zu ihrer Farbe.</p>
+      <p><b>Augen:</b> Ass 11, Zehn 10, König 4, Dame 3, Bube 2, 9/8/7 nichts – zusammen 120. Der Alleinspieler gewinnt mit mindestens 61 Augen (Skat mitgezählt). <b>Schneider:</b> eine Seite hat höchstens 30 Augen, <b>Schwarz:</b> eine Seite macht keinen Stich.</p>
+      <p><b>Spielwert:</b> Grundwert × Stufen. Grundwert: Karo 9, Herz 10, Pik 11, Kreuz 12, Grand 24. Stufen: Spitzen „mit“ oder „ohne“ (wie viele Buben, im Farbspiel auch Trumpf-Ass, -Zehn … in lückenloser Folge ab Kreuz-Bube man hat oder nicht hat – der Skat zählt mit), +1 Spiel, +1 Hand, +1 Schneider, +1 Schneider angesagt, +1 Schwarz, +1 Schwarz angesagt, +1 Ouvert. Ansagen und Ouvert gibt es nur im Handspiel; Ouvert im Farbspiel oder Grand heißt Schwarz angesagt, alle Steine offen.</p>
+      <p><b>Null:</b> Kein Trumpf, Reihenfolge A, K, D, B, 10, 9, 8, 7. Der Alleinspieler darf keinen Stich machen. Werte: Null 23, Null Hand 35, Null Ouvert 46, Null Ouvert Hand 59. Bei Ouvert liegen seine Steine offen.</p>
+      <p><b>Überreizt:</b> Ist der Spielwert am Ende kleiner als der Reizwert, ist das Spiel verloren – gewertet mit dem nächsten Vielfachen des Grundwerts, das den Reizwert erreicht. Ein Nullspiel unter dem Reizwert kann nicht angesagt werden.</p>
+      <p><b>Kontra und Re:</b> Nach der Ansage darf jeder Gegenspieler Kontra sagen (doppelter Spielwert), der Alleinspieler darauf Re (vierfach).</p>
+      <p><b>Spielen:</b> Vorhand spielt zum ersten Stich aus, danach wer den Stich bekommt. Farbe bzw. Trumpf muss bedient werden; wer nicht bedienen kann, darf beliebig abwerfen oder trumpfen. Die Stiche liegen sichtbar als Spuren auf dem Brett.</p>
+      <p><b>Wertung (Turnierpunkte nach ISkO-Liste):</b> Gewonnen: Alleinspieler + (Spielwert + 50). Verloren: Alleinspieler − (2 × Spielwert + 50), jeder andere am Tisch +40 (zu dritt) bzw. +30 (zu viert). Kontra/Re verdoppeln bzw. vervierfachen den Spielwert.</p>
+      <p><b>Ramsch</b> (wenn alle passen, nach Vereinbarung – nicht Teil der ISkO): Jeder spielt für sich, nur die Buben sind Trumpf, der Skat geht an den letzten Stich. Wer die meisten Augen hat, verliert sie als Minuspunkte (bei Gleichstand beide). Macht ein Spieler keinen Stich (<b>Jungfrau</b>), zählen die Minuspunkte doppelt. Wer alle Stiche macht (<b>Durchmarsch</b>), bekommt +120.</p>
+      <p><b>Serie:</b> 12 Spiele (zu dritt gibt jeder 4-mal, zu viert 3-mal). Wer am Ende die meisten Turnierpunkte hat, gewinnt die Serie.</p>
+      <p><b>Card-Master-Rangliste:</b> Gewinnt der Alleinspieler, zählt das als Sieg für ihn. Verliert er, ist das eine Niederlage für ihn und ein Sieg für jeden Gegenspieler. Wer aussetzt, und Ramsch-Spiele zählen weder als Sieg noch als Niederlage. Die Skat-Punkte in der Rangliste sind die aufsummierten Turnierpunkte.</p>
+    </div>
+    <button class="wbtn red close">Verstanden</button>
+  </section>
+
+  <section id="menu" class="wpanel center small hidden">
+    <h2 class="engr">Menü</h2>
+    <div class="col-btns">
+      <button id="m-resume" class="wbtn red">Weiterspielen</button>
+      <button id="m-cam" class="wbtn ivory">Kamera zurücksetzen</button>
+      <button id="m-new" class="wbtn ivory">Zur Spielauswahl</button>
+      <button id="m-board" class="wbtn wood">Rangliste</button>
+    </div>
+  </section>
+
+  <section id="leader" class="wpanel center scroll hidden">
+    <h2 class="engr">Card Master Rangliste</h2>
+    <div id="lb-tabs" class="tabs">
+      <button data-game="all" class="wbtn teal on">Card Master</button>
+      <button data-game="1001" class="wbtn wood">1001</button>
+      <button data-game="romme" class="wbtn wood soon" disabled>Rommé <i>bald</i></button>
+      <button data-game="skat" class="wbtn wood">Skat</button>
+      <button data-game="bridge" class="wbtn wood soon" disabled>Bridge <i>bald</i></button>
+    </div>
+    <p id="lb-note" class="engr-s"></p>
+    <div id="lb-body">Lade …</div>
+    <h3 class="engr-l">Deine letzten Partien</h3>
+    <div id="hist-body"></div>
+    <button class="wbtn red close">Schließen</button>
+  </section>
+
+  <section id="profile" class="wpanel center scroll hidden">
+    <h2 class="engr">Dein Profil</h2>
+    <div id="pf-name" class="pf-name engr"></div>
+    <div class="pf-total">
+      <div><b id="pf-wins">0</b><span>Siege</span></div>
+      <div><b id="pf-losses">0</b><span>Niederlagen</span></div>
+      <div><b id="pf-matches">0</b><span>Partien</span></div>
+    </div>
+    <h3 class="engr-l">Je Spiel</h3>
+    <div id="pf-games"></div>
+    <p id="pf-note" class="engr-s"></p>
+    <button class="wbtn red close">Schließen</button>
+  </section>
+  <div id="toast" class="hidden"></div>
+</div>
+</body>
+</html>
