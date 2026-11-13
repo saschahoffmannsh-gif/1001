@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GAMES, normGame, acceptsResults, isKnownGame, aggregateOverall, rankGame, applyResult } from '../supabase/functions/tu/ranking.js';
 
-test('Nur 1001-Ergebnisse werden angenommen', () => {
+test('Nur 1001- und Skat-Ergebnisse werden angenommen', () => {
   assert.equal(acceptsResults('1001'), true);
+  assert.equal(acceptsResults('skat'), true); assert.equal(acceptsResults('SKAT'), true);
   assert.equal(acceptsResults(undefined), true, 'ohne Angabe = 1001 (ältere Clients)');
   assert.equal(normGame(undefined), '1001');
-  for (const g of ['romme', 'skat', 'bridge', 'SKAT']) { assert.equal(isKnownGame(g), true); assert.equal(acceptsResults(g), false, g); }
+  for (const g of ['romme', 'bridge', 'BRIDGE']) { assert.equal(isKnownGame(g), true); assert.equal(acceptsResults(g), false, g); }
   for (const g of ['poker', '', ' 1002', 42, null]) if (g !== '' && g !== null) assert.equal(acceptsResults(g), false, String(g));
   assert.deepEqual(Object.keys(GAMES), ['1001', 'romme', 'skat', 'bridge']);
 });

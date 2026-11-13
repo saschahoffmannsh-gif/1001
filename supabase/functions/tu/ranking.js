@@ -7,7 +7,7 @@
 export const GAMES = {
   "1001": { name: "1001", results: true },
   romme: { name: "Rommé", results: false },
-  skat: { name: "Skat", results: false },
+  skat: { name: "Skat", results: true },
   bridge: { name: "Bridge", results: false },
 };
 export const GAME_IDS = Object.keys(GAMES);
