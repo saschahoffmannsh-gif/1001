@@ -374,3 +374,4 @@ body:has(#help:not(.hidden)) .shell-in { visibility: hidden; }
   .ska-opts .wbtn { font-size: 11px; min-height: 42px; }
   #sk-announce { padding: 12px 10px; }
 }
+@media (max-width: 560px) { .pl.sitout .rd::before { content: '' !important; } .pl.sitout .rd { font-size: 9px; } }

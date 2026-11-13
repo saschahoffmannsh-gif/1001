@@ -173,7 +173,7 @@ export function createSkat(ctx) {
       const val = l ? (l.act === 'pass' ? 'weg' : l.act === 'yes' ? 'ja' : l.value) : '–';
       return `<div class="seat ${state} ${t && t.p === p ? 'turn' : ''}" data-p="${p}"><i class="peg p${p}"></i><span class="sn">${SHORT[nm(p)]}</span><em class="vh" title="${ROLE[r]}">${ROLE_S[r]}</em><span class="sv">${val}</span></div>`;
     }).join('');
-    const sayer = a.stage < 3 ? `${SHORT[nm(a.sayer)]} sagt` : '';
+    const sayer = a.stage < 3 ? (a.sayer === 0 ? 'Du sagst' : `${SHORT[nm(a.sayer)]} sagt`) : '';
     $('skb-high').innerHTML = a.bid ? `<span class="k">Gereizt</span><b>${a.bid}</b><span class="who">${a.stage === 1 ? `${SHORT[nm(a.sayer)]} → ${SHORT[nm(a.listener)]}` : a.stage === 2 ? `${SHORT[nm(a.sayer)]} → ${SHORT[nm(a.listener)]}` : ''}</span>`
       : `<span class="k">Noch nichts gereizt</span><b>18</b><span class="who">${sayer || 'Vorhand'} zuerst</span>`;
     $('skb-log').innerHTML = a.log.map((e) => `<span class="chip-tile p${e.p} ${e.act === 'pass' ? 'pass' : ''}" title="${nm(e.p)}">${e.act === 'pass' ? 'W' : e.act === 'yes' ? 'Ja' : e.value}</span>`).join('');

@@ -453,7 +453,7 @@ async function openLeaderboard() {
   loadBoard();
   try {
     const { history } = await api.history();
-    $('hist-body').innerHTML = history.length ? `<table class="lb">${history.map((h) => `<tr><td>${new Date(h.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}</td><td>${esc(GAME_INFO[h.game || '1001']?.name || h.game)}</td><td>${h.winner === 'human' ? 'Sieg' : 'Niederlage'}</td><td class="n">${h.human_total}:${h.computer_total}</td><td class="n">${h.deals} R.</td></tr>`).join('')}</table>` : '<p class="engr-s">Noch keine eigenen Partien.</p>';
+    $('hist-body').innerHTML = history.length ? `<table class="lb">${history.map((h) => `<tr><td>${new Date(h.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}</td><td>${esc(GAME_INFO[h.game || '1001']?.name || h.game)}</td><td>${h.winner === 'human' ? 'Sieg' : 'Niederlage'}</td><td class="n">${h.human_total}:${h.computer_total}</td><td class="n">${h.deals} ${h.game === 'skat' ? 'Sp.' : 'R.'}</td></tr>`).join('')}</table>` : '<p class="engr-s">Noch keine eigenen Partien.</p>';
   } catch { $('hist-body').innerHTML = '<p class="engr-s">Noch keine eigenen Partien.</p>'; }
 }
 async function loadBoard() {

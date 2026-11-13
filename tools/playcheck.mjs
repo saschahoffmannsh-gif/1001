@@ -18,8 +18,8 @@ let gotResult = false, gotMenu = false;
 const t0 = Date.now();
 while (Date.now() - t0 < secs * 1000) {
   await p.waitForTimeout(500);
-  if (!gotResult && await p.isVisible('#result')) { await shot('result'); gotResult = true; await p.click('#res-next'); }
-  else if (await p.isVisible('#result')) await p.click('#res-next');
+  if (!gotResult && await p.isVisible('#result')) { await shot('result'); gotResult = true; await p.click('#res-next', { timeout: 3000 }).catch(() => {}); }
+  else if (await p.isVisible('#result')) await p.click('#res-next', { timeout: 3000 }).catch(() => {});
   if (await p.isVisible('#matchend')) { await p.waitForTimeout(800); await shot('matchend'); break; }
   if (gotResult && !gotMenu) { await p.click('#btn-menu'); await p.waitForTimeout(300); await shot('menu'); await p.click('#m-resume'); gotMenu = true; }
 }
